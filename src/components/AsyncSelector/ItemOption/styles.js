@@ -10,6 +10,9 @@ export const Container = styled.View`
   border-left-color: #ddd;
   border-bottom-width: ${props => (props.last ? '1px' : 0)};
   border-bottom-color: #ddd;
+
+  background: #f0f0f0;
+  opacity: ${props => props.opacity};
 `;
 
 export const Option = styled(RectButton)`

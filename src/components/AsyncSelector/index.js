@@ -6,11 +6,18 @@ import PropTypes from 'prop-types';
 
 import ItemOption from './ItemOption';
 
-import { Container, InputContainer, SearchInput, List } from './styles';
+import {
+  Container,
+  InputContainer,
+  SearchInput,
+  ListContainer,
+  List,
+} from './styles';
 
 export default function AsyncSelector({
   url,
   delay,
+  dropdownOpacity,
   onCallEnded,
   onChangeSelected,
 }) {
@@ -78,17 +85,20 @@ export default function AsyncSelector({
         />
         {loading && <ActivityIndicator size="small" color="#ddd" />}
       </InputContainer>
-      <List
-        data={results}
-        keyExtractor={item => String(item.id)}
-        renderItem={({ item, index }) => (
-          <ItemOption
-            data={item}
-            last={index === results.length - 1}
-            onSelect={handleSelect}
-          />
-        )}
-      />
+      <ListContainer>
+        <List
+          data={results}
+          keyExtractor={item => String(item.id)}
+          renderItem={({ item, index }) => (
+            <ItemOption
+              data={item}
+              last={index === results.length - 1}
+              onSelect={handleSelect}
+              opacity={dropdownOpacity}
+            />
+          )}
+        />
+      </ListContainer>
     </Container>
   );
 }
@@ -96,6 +106,7 @@ export default function AsyncSelector({
 AsyncSelector.propTypes = {
   onChangeSelected: PropTypes.func,
   onCallEnded: PropTypes.func,
+  dropdownOpacity: PropTypes.number,
   delay: PropTypes.number,
   url: PropTypes.string.isRequired,
 };
@@ -103,5 +114,6 @@ AsyncSelector.propTypes = {
 AsyncSelector.defaultProps = {
   onChangeSelected: undefined,
   onCallEnded: data => data,
+  dropdownOpacity: 0.9,
   delay: 300,
 };

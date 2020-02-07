@@ -18,6 +18,12 @@ export const SearchInput = styled.TextInput`
   flex-basis: 90%;
 `;
 
+export const ListContainer = styled.View`
+  z-index: 2;
+`;
+
 export const List = styled.FlatList.attrs({
   showsVerticalScrollIndicator: false,
-})``;
+})`
+  position: absolute;
+`;

@@ -4,9 +4,9 @@ import PropTypes from 'prop-types';
 
 import { Container, Option } from './styles';
 
-export default function ItemOption({ data, last, onSelect }) {
+export default function ItemOption({ data, last, onSelect, opacity }) {
   return (
-    <Container last={last}>
+    <Container last={last} opacity={opacity}>
       <Option onPress={() => onSelect(data)}>
         <Text>{data.name}</Text>
       </Option>
@@ -20,6 +20,7 @@ ItemOption.propTypes = {
   }).isRequired,
   last: PropTypes.bool,
   onSelect: PropTypes.func,
+  opacity: PropTypes.number.isRequired,
 };
 
 ItemOption.defaultProps = {

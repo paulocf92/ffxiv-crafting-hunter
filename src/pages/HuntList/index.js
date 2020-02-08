@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Alert } from 'react-native';
 
 import AsyncSelector from '~/components/AsyncSelector';
 import HuntItem from '~/components/HuntItem';
@@ -22,8 +22,44 @@ export default function HuntList() {
   }
 
   function handleSelected({ current }) {
-    const newRecipes = [...recipes, current];
-    setRecipes(newRecipes);
+    const recipeExists = recipes.filter(recipe => recipe.id === current.id);
+
+    if (recipeExists.length) {
+      Alert.alert(
+        'Recipe exists',
+        `Recipe for '${current.name}' has already been added to the list, overwrite progress?`,
+        [
+          {
+            text: 'No',
+            style: 'cancel',
+          },
+          {
+            text: 'Yes',
+            onPress: () => {
+              const newRecipes = recipes.filter(
+                recipe => recipe.id !== current.id,
+              );
+
+              setRecipes(
+                [...newRecipes, current].sort((a, b) =>
+                  a.name.localeCompare(b.name),
+                ),
+              );
+            },
+          },
+        ],
+      );
+    } else {
+      setRecipes(
+        [...recipes, current].sort((a, b) => a.name.localeCompare(b.name)),
+      );
+    }
+  }
+
+  function handleDeleteRecipe({ id }) {
+    const activeRecipes = recipes.filter(recipe => recipe.id !== id);
+
+    setRecipes(activeRecipes);
   }
 
   return (
@@ -39,9 +75,12 @@ export default function HuntList() {
         onChangeSelected={handleSelected}
       />
       <List
+        key={recipes.length}
         data={recipes}
         keyExtractor={item => String(item.id)}
-        renderItem={({ item }) => <HuntItem data={item} />}
+        renderItem={({ item }) => (
+          <HuntItem data={item} onDelete={handleDeleteRecipe} />
+        )}
       />
     </Container>
   );

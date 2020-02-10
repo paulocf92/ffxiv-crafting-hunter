@@ -1,13 +1,69 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Alert } from 'react-native';
+
+import RecipeColumns from '~/config/RecipeQueryColumns';
+import api from '~/services/api';
+import Storage from '~/services/storage';
 
 import AsyncSelector from '~/components/AsyncSelector';
 import HuntItem from '~/components/HuntItem';
 
-import { Container, List } from './styles';
+import { Container, List, ClearButton } from './styles';
 
 export default function HuntList() {
   const [recipes, setRecipes] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    async function load() {
+      const loadRecipes = await Storage.getAll();
+
+      setRecipes(loadRecipes.sort((a, b) => a.name.localeCompare(b.name)));
+    }
+
+    load();
+  }, []);
+
+  async function storeRecipe(id) {
+    setLoading(true);
+
+    const response = await api.get(`/recipe/${id}`, {
+      params: {
+        columns: RecipeColumns,
+      },
+    });
+
+    Storage.storeTree(`@craftinghunter_recipe_${id}`, response.data);
+
+    const recipeStorage = await Storage.getItem('@craftinghunter_recipes');
+
+    if (!recipeStorage) {
+      Storage.setItem('@craftinghunter_recipes', [id]);
+    } else {
+      recipeStorage.push(id);
+      Storage.setItem('@craftinghunter_recipes', recipeStorage);
+    }
+
+    setLoading(false);
+  }
+
+  function handleClear() {
+    if (recipes.length) {
+      Alert.alert('Clear recipes', 'Clear all recipes stored in the device?', [
+        {
+          text: 'No',
+          style: 'cancel',
+        },
+        {
+          text: 'Yes',
+          onPress: async () => {
+            await Storage.clear();
+            setRecipes([]);
+          },
+        },
+      ]);
+    }
+  }
 
   function handleCallEnded(data) {
     if (data && data.Results.length) {
@@ -36,15 +92,7 @@ export default function HuntList() {
           {
             text: 'Yes',
             onPress: () => {
-              const newRecipes = recipes.filter(
-                recipe => recipe.id !== current.id,
-              );
-
-              setRecipes(
-                [...newRecipes, current].sort((a, b) =>
-                  a.name.localeCompare(b.name),
-                ),
-              );
+              storeRecipe(current.id);
             },
           },
         ],
@@ -53,11 +101,25 @@ export default function HuntList() {
       setRecipes(
         [...recipes, current].sort((a, b) => a.name.localeCompare(b.name)),
       );
+
+      storeRecipe(current.id);
     }
   }
 
-  function handleDeleteRecipe({ id }) {
+  async function handleDeleteRecipe({ id }) {
     const activeRecipes = recipes.filter(recipe => recipe.id !== id);
+
+    const stored = (await Storage.getItem('@craftinghunter_recipes')).filter(
+      recipeId => recipeId !== id,
+    );
+
+    if (stored.length > 0) {
+      await Storage.setItem('@craftinghunter_recipes', stored);
+    } else {
+      await Storage.removeItem('@craftinghunter_recipes');
+    }
+
+    await Storage.removeItem(`@craftinghunter_recipe_${id}`);
 
     setRecipes(activeRecipes);
   }
@@ -82,6 +144,10 @@ export default function HuntList() {
           <HuntItem data={item} onDelete={handleDeleteRecipe} />
         )}
       />
+
+      <ClearButton onPress={handleClear} enabled={!!recipes.length} lightText>
+        Clear all
+      </ClearButton>
     </Container>
   );
 }

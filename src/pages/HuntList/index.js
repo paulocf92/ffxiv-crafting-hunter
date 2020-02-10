@@ -6,6 +6,7 @@ import api from '~/services/api';
 import Storage from '~/services/storage';
 
 import AsyncSelector from '~/components/AsyncSelector';
+import Loader from '~/components/Loader';
 import HuntItem from '~/components/HuntItem';
 
 import { Container, List, ClearButton } from './styles';
@@ -57,8 +58,10 @@ export default function HuntList() {
         {
           text: 'Yes',
           onPress: async () => {
+            setLoading(true);
             await Storage.clear();
             setRecipes([]);
+            setLoading(false);
           },
         },
       ]);
@@ -92,17 +95,21 @@ export default function HuntList() {
           {
             text: 'Yes',
             onPress: () => {
+              setLoading(true);
               storeRecipe(current.id);
+              setLoading(false);
             },
           },
         ],
       );
     } else {
+      setLoading(true);
       setRecipes(
         [...recipes, current].sort((a, b) => a.name.localeCompare(b.name)),
       );
 
       storeRecipe(current.id);
+      setLoading(false);
     }
   }
 
@@ -125,29 +132,32 @@ export default function HuntList() {
   }
 
   return (
-    <Container>
-      <View>
-        <Text style={{ paddingBottom: 10 }}>
-          Enter an item name, then choose from the dropdown.
-        </Text>
-      </View>
-      <AsyncSelector
-        url="https://xivapi.com/search?string=@INPUT&string_algo=prefix&indexes=Recipe&columns=ID,Name,Icon&limit=8"
-        onCallEnded={handleCallEnded}
-        onChangeSelected={handleSelected}
-      />
-      <List
-        key={recipes.length}
-        data={recipes}
-        keyExtractor={item => String(item.id)}
-        renderItem={({ item }) => (
-          <HuntItem data={item} onDelete={handleDeleteRecipe} />
-        )}
-      />
+    <>
+      <Container>
+        <View>
+          <Text style={{ paddingBottom: 10 }}>
+            Enter an item name, then choose from the dropdown.
+          </Text>
+        </View>
+        <AsyncSelector
+          url="https://xivapi.com/search?string=@INPUT&string_algo=prefix&indexes=Recipe&columns=ID,Name,Icon&limit=8"
+          onCallEnded={handleCallEnded}
+          onChangeSelected={handleSelected}
+        />
+        <List
+          key={recipes.length}
+          data={recipes}
+          keyExtractor={item => String(item.id)}
+          renderItem={({ item }) => (
+            <HuntItem data={item} onDelete={handleDeleteRecipe} />
+          )}
+        />
 
-      <ClearButton onPress={handleClear} enabled={!!recipes.length} lightText>
-        Clear all
-      </ClearButton>
-    </Container>
+        <ClearButton onPress={handleClear} enabled={!!recipes.length} lightText>
+          Clear all
+        </ClearButton>
+      </Container>
+      {loading && <Loader />}
+    </>
   );
 }

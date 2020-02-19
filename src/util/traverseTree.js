@@ -15,6 +15,7 @@ export default function traverseTree(
       name: item.ClassJob.NameEnglish,
     },
     progress: 0,
+    totalProgress: 0,
     children: [],
   };
 
@@ -45,6 +46,7 @@ export default function traverseTree(
           recipeAmount: item[`AmountIngredient${i}`],
           totalAmount: item[`AmountIngredient${i}`] * parentAmount,
           progress: 0,
+          totalProgress: 0,
           leaf: true,
         };
 
@@ -64,6 +66,7 @@ export default function traverseTree(
             icon: addNode.icon,
             totalAmount: addNode.totalAmount,
             progress: 0,
+            totalProgress: 0,
           });
         }
       }

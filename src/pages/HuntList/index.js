@@ -89,7 +89,7 @@ export default function HuntList() {
             text: 'Yes',
             onPress: () => {
               setLoading(true);
-              storeRecipe(current.id);
+              Storage.resetProgress(current.id);
               setLoading(false);
             },
           },
@@ -109,7 +109,7 @@ export default function HuntList() {
   async function handleDeleteRecipe({ id }) {
     const activeRecipes = recipes.filter(recipe => recipe.id !== id);
 
-    await Storage.deleteRecipe(id);
+    Storage.deleteRecipe(id);
 
     setRecipes(activeRecipes);
   }

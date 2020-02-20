@@ -1,5 +1,5 @@
 import Storage from './storage';
-import traverseRecipeTree from './traverseRecipeTree';
+import { traverseRecipeTree, resetRecipeProgress } from './recipeTree';
 
 class FFXIVStorage extends Storage {
   constructor() {
@@ -72,6 +72,16 @@ class FFXIVStorage extends Storage {
     this.recipeStorage.splice(0, this.recipeStorage.length);
     await Promise.all(removeAll);
     await FFXIVStorage.setItem('@craftinghunter_recipes', []);
+  }
+
+  // eslint-disable-next-line
+  async resetProgress(id) {
+    const { item: recipeItem, baseItems } = await FFXIVStorage.getItem(
+      `@craftinghunter_recipe_${id}`,
+    );
+
+    const item = resetRecipeProgress(recipeItem, baseItems);
+    await FFXIVStorage.setItem(`@craftinghunter_recipe_${id}`, item);
   }
 }
 

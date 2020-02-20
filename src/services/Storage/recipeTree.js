@@ -1,6 +1,26 @@
 const MAX_INGREDIENTS = 9;
 
-export default function traverseRecipeTree(
+export function resetRecipeProgress(recipeItem, baseItems) {
+  const item = { ...recipeItem, progress: 0, totalProgress: 0 };
+
+  if (item.children) {
+    for (let i = 0; i < item.children.length; i += 1) {
+      item.children[i] = resetRecipeProgress(item.children[i]);
+    }
+  }
+
+  if (item.depth === 0) {
+    for (let i = 0; i < baseItems.length; i += 1) {
+      baseItems[i] = { ...baseItems[i], progress: 0, totalProgress: 0 };
+    }
+
+    return { item, baseItems };
+  }
+
+  return item;
+}
+
+export function traverseRecipeTree(
   item,
   leaves = [],
   depth = -1,

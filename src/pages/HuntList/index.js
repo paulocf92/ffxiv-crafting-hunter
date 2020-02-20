@@ -3,7 +3,7 @@ import { View, Text, Alert } from 'react-native';
 
 import RecipeColumns from '~/config/RecipeQueryColumns';
 import api from '~/services/api';
-import Storage from '~/services/storage';
+import Storage from '~/services/Storage';
 
 import AsyncSelector from '~/components/AsyncSelector';
 import Loader from '~/components/Loader';
@@ -11,13 +11,15 @@ import HuntItem from '~/components/HuntItem';
 
 import { Container, List, ClearButton } from './styles';
 
+Storage.init();
+
 export default function HuntList() {
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     async function load() {
-      const loadRecipes = await Storage.getAll();
+      const loadRecipes = await Storage.getRecipes();
 
       setRecipes(loadRecipes.sort((a, b) => a.name.localeCompare(b.name)));
     }
@@ -34,16 +36,7 @@ export default function HuntList() {
       },
     });
 
-    Storage.storeTree(`@craftinghunter_recipe_${id}`, response.data);
-
-    const recipeStorage = await Storage.getItem('@craftinghunter_recipes');
-
-    if (!recipeStorage) {
-      Storage.setItem('@craftinghunter_recipes', [id]);
-    } else {
-      recipeStorage.push(id);
-      Storage.setItem('@craftinghunter_recipes', recipeStorage);
-    }
+    Storage.storeRecipe(id, response.data);
 
     setLoading(false);
   }
@@ -59,7 +52,7 @@ export default function HuntList() {
           text: 'Yes',
           onPress: async () => {
             setLoading(true);
-            await Storage.clear();
+            await Storage.clearRecipes();
             setRecipes([]);
             setLoading(false);
           },
@@ -116,17 +109,7 @@ export default function HuntList() {
   async function handleDeleteRecipe({ id }) {
     const activeRecipes = recipes.filter(recipe => recipe.id !== id);
 
-    const stored = (await Storage.getItem('@craftinghunter_recipes')).filter(
-      recipeId => recipeId !== id,
-    );
-
-    if (stored.length > 0) {
-      await Storage.setItem('@craftinghunter_recipes', stored);
-    } else {
-      await Storage.removeItem('@craftinghunter_recipes');
-    }
-
-    await Storage.removeItem(`@craftinghunter_recipe_${id}`);
+    await Storage.deleteRecipe(id);
 
     setRecipes(activeRecipes);
   }

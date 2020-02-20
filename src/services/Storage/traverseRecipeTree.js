@@ -1,6 +1,8 @@
-export default function traverseTree(
+const MAX_INGREDIENTS = 9;
+
+export default function traverseRecipeTree(
   item,
-  leaves,
+  leaves = [],
   depth = -1,
   parentAmount = 1,
 ) {
@@ -20,16 +22,16 @@ export default function traverseTree(
   };
 
   // This array keeps track of base items
-  const leafItems = leaves || [];
+  const leafItems = leaves;
 
   // All recipes in FFXIV have at maximum 9 (sub-)ingredients
-  for (let i = 0; i <= 9; i += 1) {
+  for (let i = 0; i <= MAX_INGREDIENTS; i += 1) {
     if (item[`ItemIngredient${i}`] && item[`ItemIngredient${i}`].ID) {
       let addNode = null;
       // Has recipe?
       if (item[`ItemIngredientRecipe${i}`]) {
         // Traverse the tree further down until there's only a base ingredient
-        addNode = traverseTree(
+        addNode = traverseRecipeTree(
           item[`ItemIngredientRecipe${i}`][0], // [0,1,etc] Who can craft it
           leafItems, // Pass down to look for more base ingredients
           depth + 1,

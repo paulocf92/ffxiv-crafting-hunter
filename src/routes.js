@@ -1,32 +1,34 @@
 import React from 'react';
-import { createAppContainer } from 'react-navigation';
-import { createStackNavigator } from 'react-navigation-stack';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
 
-import Home from './pages/Home';
 import Header from './components/Header';
+import Home from './pages/Home';
 import HuntList from './pages/HuntList';
 
-const Routes = createAppContainer(
-  createStackNavigator(
-    {
-      Home,
-      App: createStackNavigator(
-        {
-          HuntList,
-        },
-        {
-          defaultNavigationOptions: navigation => ({
-            header: () => <Header {...navigation} />,
-          }),
-        },
-      ),
-    },
-    {
-      defaultNavigationOptions: {
-        headerShown: false,
-      },
-    },
-  ),
-);
+function Routes() {
+  const Stack = createStackNavigator();
+
+  return (
+    <NavigationContainer>
+      <Stack.Navigator
+        initialRouteName="Home"
+        screenOptions={{ headerShown: false }}
+      >
+        <Stack.Screen name="Home" component={Home} />
+        <Stack.Screen name="App">
+          {() => (
+            <Stack.Navigator
+              initialRouteName="HuntList"
+              screenOptions={{ header: props => <Header {...props} /> }}
+            >
+              <Stack.Screen name="HuntList" component={HuntList} />
+            </Stack.Navigator>
+          )}
+        </Stack.Screen>
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
 
 export default Routes;

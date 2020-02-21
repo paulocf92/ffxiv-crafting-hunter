@@ -16,7 +16,11 @@ export default function Home({ navigation }) {
         items to hunt their crafting schema and begin hunting for matts!
       </Instructions>
 
-      <Button onPress={() => navigation.navigate('HuntList')}>Hunt!</Button>
+      <Button
+        onPress={() => navigation.navigate('App', { screen: 'HuntList' })}
+      >
+        Hunt!
+      </Button>
     </Background>
   );
 }

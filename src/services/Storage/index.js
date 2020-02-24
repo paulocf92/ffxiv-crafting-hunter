@@ -18,7 +18,7 @@ class FFXIVStorage extends Storage {
   }
 
   async storeRecipe(id, recipe) {
-    const [item, baseItems] = traverseRecipeTree(recipe);
+    const [item, baseItems] = await traverseRecipeTree(recipe);
 
     await FFXIVStorage.setItem(`@craftinghunter_recipe_${id}`, {
       item,
@@ -35,6 +35,13 @@ class FFXIVStorage extends Storage {
 
     await FFXIVStorage.setItem('@craftinghunter_recipes', this.recipeStorage);
     await FFXIVStorage.removeItem(`@craftinghunter_recipe_${id}`);
+  }
+
+  // eslint-disable-next-line
+  async getRecipe(id) {
+    const recipe = await FFXIVStorage.getItem(`@craftinghunter_recipe_${id}`);
+
+    return recipe;
   }
 
   async getRecipes() {

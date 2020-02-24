@@ -15,30 +15,27 @@ Storage.init();
 
 export default function HuntList() {
   const [recipes, setRecipes] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       const loadRecipes = await Storage.getRecipes();
 
       setRecipes(loadRecipes.sort((a, b) => a.name.localeCompare(b.name)));
+      setLoading(false);
     }
 
     load();
   }, []);
 
   async function storeRecipe(id) {
-    setLoading(true);
-
     const response = await api.get(`/recipe/${id}`, {
       params: {
         columns: RecipeColumns,
       },
     });
 
-    Storage.storeRecipe(id, response.data);
-
-    setLoading(false);
+    await Storage.storeRecipe(id, response.data);
   }
 
   function handleClear() {
@@ -73,7 +70,7 @@ export default function HuntList() {
     return data;
   }
 
-  function handleSelected({ current }) {
+  async function handleSelected({ current }) {
     const recipeExists = recipes.filter(recipe => recipe.id === current.id);
 
     if (recipeExists.length) {
@@ -87,9 +84,9 @@ export default function HuntList() {
           },
           {
             text: 'Yes',
-            onPress: () => {
+            onPress: async () => {
               setLoading(true);
-              Storage.resetProgress(current.id);
+              await Storage.resetProgress(current.id);
               setLoading(false);
             },
           },
@@ -97,11 +94,11 @@ export default function HuntList() {
       );
     } else {
       setLoading(true);
+
+      await storeRecipe(current.id);
       setRecipes(
         [...recipes, current].sort((a, b) => a.name.localeCompare(b.name)),
       );
-
-      storeRecipe(current.id);
       setLoading(false);
     }
   }
@@ -109,7 +106,7 @@ export default function HuntList() {
   async function handleDeleteRecipe({ id }) {
     const activeRecipes = recipes.filter(recipe => recipe.id !== id);
 
-    Storage.deleteRecipe(id);
+    await Storage.deleteRecipe(id);
 
     setRecipes(activeRecipes);
   }

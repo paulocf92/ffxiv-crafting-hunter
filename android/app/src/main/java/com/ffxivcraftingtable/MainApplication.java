@@ -1,4 +1,4 @@
-package com.ffxivcraftinghunt;
+package com.ffxivcraftinghunter;
 
 import android.app.Application;
 import android.content.Context;

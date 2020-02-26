@@ -80,12 +80,6 @@ export async function traverseRecipeTree(
   const recipeYield = amount?.recipeYield ?? 1;
   const totalRequired = amount?.totalRequired ?? 1;
 
-  console.tron.log(
-    `Entering recipe for ${
-      ingredient ? ingredient.name : recipe.Name
-    }, yield is ${recipeYield}`,
-  );
-
   let node = {
     depth: depth + 1,
     id: ingredient ? ingredient.id : recipe.ID,
@@ -271,8 +265,8 @@ export async function traverseRecipeTree(
   if (depth + 1 === 0) {
     node.root = true;
 
-    console.tron.log('[node, leafItems]');
-    console.tron.log([node, leafItems]);
+    // console.tron.log('[node, leafItems]');
+    // console.tron.log([node, leafItems]);
 
     return [node, leafItems];
   }

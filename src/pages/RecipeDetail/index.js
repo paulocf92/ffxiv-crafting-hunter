@@ -36,12 +36,8 @@ export default function RecipeDetail({ route }) {
 
   function renderIngredient(ingredient, parentCrystals) {
     return ingredient.children.map((item, idx) => (
-      <RecipeTreeRow>
-        <Ingredient
-          key={item.id}
-          item={item}
-          crystals={idx === 0 ? parentCrystals : null}
-        />
+      <RecipeTreeRow key={item.id}>
+        <Ingredient item={item} crystals={idx === 0 ? parentCrystals : null} />
         {item.children && (
           <RecipeTreeNode>
             {renderIngredient(item, item.crystals)}

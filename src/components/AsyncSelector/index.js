@@ -85,20 +85,22 @@ export default function AsyncSelector({
         />
         {loading && <ActivityIndicator size="small" color="#ddd" />}
       </InputContainer>
-      <ListContainer>
-        <List
-          data={results}
-          keyExtractor={item => String(item.id)}
-          renderItem={({ item, index }) => (
-            <ItemOption
-              data={item}
-              last={index === results.length - 1}
-              onSelect={handleSelect}
-              opacity={dropdownOpacity}
-            />
-          )}
-        />
-      </ListContainer>
+      {!!results.length && (
+        <ListContainer>
+          <List
+            data={results}
+            opacity={dropdownOpacity}
+            keyExtractor={item => String(item.id)}
+            renderItem={({ item, index }) => (
+              <ItemOption
+                data={item}
+                last={index === results.length - 1}
+                onSelect={handleSelect}
+              />
+            )}
+          />
+        </ListContainer>
+      )}
     </Container>
   );
 }

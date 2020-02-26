@@ -19,11 +19,20 @@ export const SearchInput = styled.TextInput`
 `;
 
 export const ListContainer = styled.View`
+  flex: 1;
   z-index: 2;
 `;
 
 export const List = styled.FlatList.attrs({
   showsVerticalScrollIndicator: false,
 })`
+  flex: 1;
+  background: ${props =>
+    props.opacity
+      ? `rgba(240, 240, 240, ${props.opacity})`
+      : 'rgba(240, 240, 240, 1)'};
+  border: 1px solid #d2d2d2;
+  border-radius: 4px;
+  padding: 3px 5px;
   position: absolute;
 `;

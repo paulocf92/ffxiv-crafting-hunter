@@ -1,20 +1,20 @@
 import styled from 'styled-components/native';
 import { RectButton } from 'react-native-gesture-handler';
+import { Platform } from 'react-native';
 
 export const Container = styled.View`
-  border-top-width: 1px;
-  border-top-color: #ddd;
-  border-right-width: 1px;
-  border-right-color: #ddd;
-  border-left-width: 1px;
-  border-left-color: #ddd;
-  border-bottom-width: ${props => (props.last ? '1px' : 0)};
-  border-bottom-color: #ddd;
+  flex: 1;
+  flex-direction: row;
 
-  background: #f0f0f0;
-  opacity: ${props => props.opacity};
+  border-bottom-width: ${props => (props.last ? 0 : '1px')};
+  border-bottom-color: #d2d2d2;
+  padding-bottom: ${props => (props.last ? 0 : '3px')};
+  margin-bottom: ${props => (props.last ? 0 : '3px')};
 `;
 
-export const Option = styled(RectButton)`
-  padding: 5px 5px 5px 10px;
+export const Option = styled(RectButton).attrs({
+  rippleColor: Platform.OS === 'ios' ? null : '#beff33',
+})`
+  width: 100%;
+  padding: 6px 5px 7px;
 `;

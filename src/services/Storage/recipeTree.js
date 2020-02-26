@@ -235,10 +235,8 @@ export async function traverseRecipeTree(
 
   // Compose crystals property based on available crystals required by recipe
   if (node.children.length) {
-    const crystals = [];
-
     // Create new prop crystals and remove them from children
-    node.crystals = node.children.filter(item => !!item.crystal);
+    const crystals = node.children.filter(item => !!item.crystal);
     node.children = node.children.filter(item => !item.crystal);
 
     if (crystals.length) {

@@ -1,6 +1,4 @@
-/* eslint-disable func-names */
 /* eslint-disable no-await-in-loop */
-/* eslint-disable no-restricted-syntax */
 import api from '~/services/api';
 import RecipeColumns from '~/config/RecipeQueryColumns';
 
@@ -129,84 +127,56 @@ export async function traverseRecipeTree(
 
   const leafItems = leaves;
 
-  const recipeIngredients = [];
-
   /**
    * Loop through this recipe's ingredients and add them to an array based on
    * whether it's a recipe or not
    */
   for (let i = 0; i <= MAX_INGREDIENTS; i += 1) {
     if (recipe[`ItemIngredient${i}`] !== null) {
-      if (recipe[`ItemIngredientRecipe${i}`]) {
-        const recipeYield =
-          recipe[`ItemIngredientRecipe${i}`]?.[0]?.AmountResult ?? 1;
-
-        recipeIngredients.push({
-          isRecipe: true,
-          data: {
-            item: recipe[`ItemIngredientRecipe${i}`][0],
-            itemInfo: {
-              id: recipe[`ItemIngredient${i}`].ID,
-              name: recipe[`ItemIngredient${i}`].Name,
-              icon: `https://xivapi.com${recipe[`ItemIngredient${i}`].Icon}`,
-            },
-            amount: {
-              perRecipe: recipe[`AmountIngredient${i}`],
-              recipeYield,
-              totalRequired:
-                recipe[`AmountIngredient${i}`] * parentTotalRequired,
-            },
-          },
-        });
-      } else {
-        recipeIngredients.push({
-          data: {
-            item: recipe[`ItemIngredient${i}`],
-            itemInfo: {
-              id: recipe[`ItemIngredient${i}`].ID,
-              name: recipe[`ItemIngredient${i}`].Name,
-              icon: `https://xivapi.com${recipe[`ItemIngredient${i}`].Icon}`,
-            },
-            amount: {
-              perRecipe: recipe[`AmountIngredient${i}`],
-              /**
-               * Modular math to prevent attributing wrong amount to recipes
-               * whose yield is greater than 1 (eg. 2, 3) but only a subset is
-               * required (i.e. amount required not divisible by its yield).
-               */
-              totalRequired:
-                parentTotalRequired % parentYield === 0 && parentYield > 1
-                  ? recipe[`AmountIngredient${i}`] *
-                    (parentTotalRequired / parentYield)
-                  : recipe[`AmountIngredient${i}`] * parentTotalRequired,
-            },
-          },
-        });
-      }
-    }
-  }
-
-  // Anonymous async function to recursively check (sub-)ingredients
-  await (async function() {
-    for (const recipeIngredient of recipeIngredients) {
-      const { data } = recipeIngredient;
-      const { itemInfo, amount } = data;
-
       let child = null;
+      const data = {
+        id: recipe[`ItemIngredient${i}`].ID,
+        name: recipe[`ItemIngredient${i}`].Name,
+        icon: `https://xivapi.com${recipe[`ItemIngredient${i}`].Icon}`,
+      };
 
-      if (recipeIngredient.isRecipe) {
+      if (recipe[`ItemIngredientRecipe${i}`]) {
         /**
          * Case #1: This recipe is contained within the first request, traverse
          * it further down.
          */
+        const recipeYield =
+          recipe[`ItemIngredientRecipe${i}`]?.[0]?.AmountResult ?? 1;
+
         child = await traverseRecipeTree(
-          data.item,
+          recipe[`ItemIngredientRecipe${i}`][0],
           leafItems, // Pass down to look for more base ingredients
           depth + 1,
-          amount,
-          itemInfo,
+          {
+            perRecipe: recipe[`AmountIngredient${i}`],
+            recipeYield,
+            totalRequired: recipe[`AmountIngredient${i}`] * parentTotalRequired,
+          },
+          data,
         );
       } else {
+        // If it's not a recipe received from initial request...
+        const amount = {
+          perRecipe: recipe[`AmountIngredient${i}`],
+          /**
+           * Modular math to prevent attributing wrong amount to recipes
+           * whose yield is greater than 1 (eg. 2, 3) but only a subset is
+           * required (i.e. amount required not divisible by its yield).
+           */
+          totalRequired:
+            parentTotalRequired % parentYield === 0 && parentYield > 1
+              ? recipe[`AmountIngredient${i}`] *
+                (parentTotalRequired / parentYield)
+              : recipe[`AmountIngredient${i}`] * parentTotalRequired,
+        };
+
+        const subRecipe = await verifySubRecipe(data.name);
+
         /**
          * Case #2: Verify if this item is a recipe by requesting once again.
          * This async function prevents looking for crystals.
@@ -214,8 +184,6 @@ export async function traverseRecipeTree(
          * To-Do: Find a better way to prevent additional requests, besides
          * regex'ing for shards/crystals/clusters names.
          */
-        const subRecipe = await verifySubRecipe(itemInfo.name);
-
         if (subRecipe) {
           const recipeYield = subRecipe.AmountResult ?? 1;
 
@@ -224,13 +192,13 @@ export async function traverseRecipeTree(
             leafItems, // Pass down to look for more base ingredients
             depth + 1,
             { ...amount, recipeYield },
-            itemInfo,
+            data,
           );
         } else {
           /**
            * Case #3: This is a raw item (i.e. not composed of anything)
            */
-          child = composeItemData(itemInfo, amount, depth);
+          child = composeItemData(data, amount, depth);
 
           const idx = leafItems.findIndex(leaf => leaf.id === child.id);
 
@@ -263,7 +231,7 @@ export async function traverseRecipeTree(
         node.children.push(child);
       }
     }
-  })();
+  }
 
   // Compose crystals property based on available crystals required by recipe
   if (node.children.length) {

@@ -117,5 +117,5 @@ AsyncSelector.defaultProps = {
   onChangeSelected: undefined,
   onCallEnded: data => data,
   dropdownOpacity: 0.9,
-  delay: 1500,
+  delay: 700,
 };

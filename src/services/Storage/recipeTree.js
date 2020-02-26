@@ -1,3 +1,6 @@
+/* eslint-disable func-names */
+/* eslint-disable no-await-in-loop */
+/* eslint-disable no-restricted-syntax */
 import api from '~/services/api';
 import RecipeColumns from '~/config/RecipeQueryColumns';
 
@@ -69,34 +72,60 @@ async function verifySubRecipe(name) {
   return recipe?.data ?? null;
 }
 
+function composeItemData(data, amount, depth, itemData, isRecipe = false) {
+  if (isRecipe) {
+    const perRecipe = amount?.perRecipe ?? 1;
+    const recipeYield = amount?.recipeYield ?? 1;
+    const totalRequired = amount?.totalRequired ?? 1;
+
+    return {
+      depth: depth + 1,
+      id: itemData ? itemData.id : data.ID,
+      name: itemData ? itemData.name : data.Name,
+      icon: itemData ? itemData.icon : `https://xivapi.com${data.Icon}`,
+      perRecipe,
+      recipeYield,
+      totalRequired,
+      discipline: {
+        icon: `https://xivapi.com${data.ClassJob.Icon}`,
+        name: data.ClassJob.NameEnglish,
+      },
+      progress: 0,
+      totalProgress: 0,
+      children: [],
+      crystal: false,
+    };
+  }
+
+  const { id, name, icon } = data;
+  const { perRecipe, totalRequired } = amount;
+  const crystal = CRYSTALS.some(rx => rx.test(name));
+
+  return {
+    depth: depth + 2,
+    id,
+    name,
+    icon,
+    perRecipe,
+    totalRequired,
+    progress: 0,
+    totalProgress: 0,
+    crystal,
+    leaf: true,
+  };
+}
+
 export async function traverseRecipeTree(
   recipe,
   leaves = [],
   depth = -1,
-  amount,
-  ingredient,
+  parentAmount,
+  itemData,
 ) {
-  const perRecipe = amount?.perRecipe ?? 1;
-  const recipeYield = amount?.recipeYield ?? 1;
-  const totalRequired = amount?.totalRequired ?? 1;
+  const parentYield = parentAmount?.recipeYield ?? 1;
+  const parentTotalRequired = parentAmount?.totalRequired ?? 1;
 
-  let node = {
-    depth: depth + 1,
-    id: ingredient ? ingredient.id : recipe.ID,
-    name: ingredient ? ingredient.name : recipe.Name,
-    icon: ingredient ? ingredient.icon : `https://xivapi.com${recipe.Icon}`,
-    perRecipe,
-    recipeYield,
-    totalRequired,
-    discipline: {
-      icon: `https://xivapi.com${recipe.ClassJob.Icon}`,
-      name: recipe.ClassJob.NameEnglish,
-    },
-    progress: 0,
-    totalProgress: 0,
-    children: [],
-    crystal: false,
-  };
+  const node = composeItemData(recipe, parentAmount, depth, itemData, true);
 
   const leafItems = leaves;
 
@@ -109,13 +138,13 @@ export async function traverseRecipeTree(
   for (let i = 0; i <= MAX_INGREDIENTS; i += 1) {
     if (recipe[`ItemIngredient${i}`] !== null) {
       if (recipe[`ItemIngredientRecipe${i}`]) {
-        const ingredientRecipeYield =
+        const recipeYield =
           recipe[`ItemIngredientRecipe${i}`]?.[0]?.AmountResult ?? 1;
 
         recipeIngredients.push({
           isRecipe: true,
           data: {
-            recipe: recipe[`ItemIngredientRecipe${i}`][0],
+            item: recipe[`ItemIngredientRecipe${i}`][0],
             itemInfo: {
               id: recipe[`ItemIngredient${i}`].ID,
               name: recipe[`ItemIngredient${i}`].Name,
@@ -123,15 +152,16 @@ export async function traverseRecipeTree(
             },
             amount: {
               perRecipe: recipe[`AmountIngredient${i}`],
-              recipeYield: ingredientRecipeYield,
-              totalRequired: recipe[`AmountIngredient${i}`] * totalRequired,
+              recipeYield,
+              totalRequired:
+                recipe[`AmountIngredient${i}`] * parentTotalRequired,
             },
           },
         });
       } else {
         recipeIngredients.push({
           data: {
-            recipe: recipe[`ItemIngredient${i}`],
+            item: recipe[`ItemIngredient${i}`],
             itemInfo: {
               id: recipe[`ItemIngredient${i}`].ID,
               name: recipe[`ItemIngredient${i}`].Name,
@@ -145,10 +175,10 @@ export async function traverseRecipeTree(
                * required (i.e. amount required not divisible by its yield).
                */
               totalRequired:
-                totalRequired % recipeYield === 0 && recipeYield > 1
+                parentTotalRequired % parentYield === 0 && parentYield > 1
                   ? recipe[`AmountIngredient${i}`] *
-                    (totalRequired / recipeYield)
-                  : recipe[`AmountIngredient${i}`] * totalRequired,
+                    (parentTotalRequired / parentYield)
+                  : recipe[`AmountIngredient${i}`] * parentTotalRequired,
             },
           },
         });
@@ -158,20 +188,19 @@ export async function traverseRecipeTree(
 
   // Anonymous async function to recursively check (sub-)ingredients
   await (async function() {
-    for (const ingredient of recipeIngredients) {
-      const { data } = ingredient;
-      const { recipe, itemInfo, amount } = data;
-      const { id, name, icon } = itemInfo;
+    for (const recipeIngredient of recipeIngredients) {
+      const { data } = recipeIngredient;
+      const { itemInfo, amount } = data;
 
       let child = null;
 
-      if (ingredient.isRecipe) {
+      if (recipeIngredient.isRecipe) {
         /**
          * Case #1: This recipe is contained within the first request, traverse
          * it further down.
          */
         child = await traverseRecipeTree(
-          recipe,
+          data.item,
           leafItems, // Pass down to look for more base ingredients
           depth + 1,
           amount,
@@ -185,36 +214,23 @@ export async function traverseRecipeTree(
          * To-Do: Find a better way to prevent additional requests, besides
          * regex'ing for shards/crystals/clusters names.
          */
-        const subRecipe = await verifySubRecipe(name);
+        const subRecipe = await verifySubRecipe(itemInfo.name);
 
         if (subRecipe) {
-          const subRecipeYield = subRecipe.AmountResult ?? 1;
+          const recipeYield = subRecipe.AmountResult ?? 1;
 
           child = await traverseRecipeTree(
             subRecipe,
             leafItems, // Pass down to look for more base ingredients
             depth + 1,
-            { ...amount, recipeYield: subRecipeYield },
+            { ...amount, recipeYield },
             itemInfo,
           );
         } else {
           /**
            * Case #3: This is a raw item (i.e. not composed of anything)
            */
-          const crystal = CRYSTALS.some(rx => rx.test(name));
-
-          child = {
-            depth: depth + 2,
-            id,
-            name,
-            icon,
-            perRecipe: amount.perRecipe,
-            totalRequired: amount.totalRequired,
-            progress: 0,
-            totalProgress: 0,
-            crystal,
-            leaf: true,
-          };
+          child = composeItemData(itemInfo, amount, depth);
 
           const idx = leafItems.findIndex(leaf => leaf.id === child.id);
 
@@ -226,12 +242,13 @@ export async function traverseRecipeTree(
             leafItems[idx].totalRequired += child.totalRequired;
           } else {
             // Otherwise append this child data
+            const { id, name, icon, crystal, totalRequired } = child;
             leafItems.push({
-              id: child.id,
-              name: child.name,
-              icon: child.icon,
+              id,
+              name,
+              icon,
               crystal,
-              totalRequired: child.totalRequired,
+              totalRequired,
               progress: 0,
               totalProgress: 0,
             });
@@ -250,7 +267,7 @@ export async function traverseRecipeTree(
 
   // Compose crystals property based on available crystals required by recipe
   if (node.children.length) {
-    let crystals = [];
+    const crystals = [];
 
     // Create new prop crystals and remove them from children
     node.crystals = node.children.filter(item => !!item.crystal);

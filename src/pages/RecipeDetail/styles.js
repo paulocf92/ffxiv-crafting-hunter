@@ -23,31 +23,19 @@ export const Image = styled.Image`
   width: ${props => (props.size ? `${props.size}px` : '30px')};
 `;
 
-export const Line = styled.View`
-  flex-direction: ${props => (props.horizontal ? 'row' : 'column')};
-  height: ${props => (props.horizontal ? '1px' : `${props.length}px`)};
-  width: ${props => (props.horizontal ? `${props.length}px` : '1px')};
-  border-left-width: ${props =>
-    props.horizontal ? 0 : `${props.thickness || 1}px`};
-  border-left-color: ${props => (props.color ? props.color : '#000')};
-  border-bottom-width: ${props =>
-    props.horizontal ? `${props.thickness || 1}px` : 0};
-  border-bottom-color: ${props => (props.color ? props.color : '#000')};
-`;
-
-export const RecipeTreeContainer = styled.ScrollView``;
+export const RecipeTreeContainer = styled.ScrollView.attrs({
+  horizontal: true,
+})``;
 
 export const RecipeTree = styled.ScrollView.attrs({
-  horizontal: true,
   contentContainerStyle: {
     flexDirection: 'column',
   },
-})``;
-
-export const RecipeTreeNode = styled.View`
-  justify-content: center;
+})`
+  padding: 10px;
 `;
 
 export const RecipeTreeRow = styled.View`
   flex-direction: row;
+  align-items: center;
 `;

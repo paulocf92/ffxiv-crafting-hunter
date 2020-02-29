@@ -8,7 +8,7 @@ import { Container, Item, ItemData, ItemQty, ItemIcon } from './styles';
 export default function Ingredient({ item, crystals }) {
   return (
     item && (
-      <Container>
+      <Container withCrystals={!!crystals}>
         {crystals && <CrystalCluster cluster={crystals} />}
         <Item key={item.id}>
           <ItemData>

@@ -1,8 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
+import { View } from 'react-native';
+
+import Svg, { Path } from 'react-native-svg';
 
 import Storage from '~/services/Storage';
 import Loader from '~/components/Loader';
+
+import computeSvgGraph from '~/utils/computeSvgGraph';
+
 import Ingredient from './Ingredient';
 import CrystalCluster from './Ingredient/CrystalCluster';
 
@@ -11,11 +17,9 @@ import {
   OutputItem,
   OutputItemText,
   Image,
-  Line,
   RecipeTreeContainer,
   RecipeTree,
   RecipeTreeRow,
-  RecipeTreeNode,
 } from './styles';
 
 export default function RecipeDetail({ route }) {
@@ -27,24 +31,49 @@ export default function RecipeDetail({ route }) {
   useEffect(() => {
     async function loadRecipe() {
       const loaded = await Storage.getRecipe(recipe.id);
-      setRecipeTree(loaded);
+      const renderableTree = {
+        item: computeSvgGraph(loaded.item),
+        baseItems: loaded.baseItems,
+      };
+
+      setRecipeTree(renderableTree);
       setLoading(false);
     }
 
     loadRecipe();
   }, [recipe]);
 
-  function renderIngredient(ingredient, parentCrystals) {
-    return ingredient.children.map((item, idx) => (
-      <RecipeTreeRow key={item.id}>
-        <Ingredient item={item} crystals={idx === 0 ? parentCrystals : null} />
-        {item.children && (
-          <RecipeTreeNode>
-            {renderIngredient(item, item.crystals)}
-          </RecipeTreeNode>
-        )}
-      </RecipeTreeRow>
-    ));
+  function renderIngredient(ingredient, depth, parentCrystals) {
+    return (
+      <View>
+        {ingredient.children.map((item, idx) => (
+          <RecipeTreeRow key={item.id}>
+            <Ingredient
+              item={item}
+              crystals={idx === 0 ? parentCrystals : null}
+            />
+
+            {item.children && (
+              <>
+                <Svg
+                  width="50"
+                  height={item.svgHeight}
+                  viewBox={`0 0 50 ${item.svgHeight}`}
+                >
+                  <Path
+                    d={item.svgGraph}
+                    fill="none"
+                    stroke="#888"
+                    strokeWidth="2"
+                  />
+                </Svg>
+                {renderIngredient(item, item.depth, item.crystals)}
+              </>
+            )}
+          </RecipeTreeRow>
+        ))}
+      </View>
+    );
   }
 
   return (
@@ -62,10 +91,8 @@ export default function RecipeDetail({ route }) {
           {recipeTree.item && (
             <RecipeTreeContainer>
               <RecipeTree>
-                <RecipeTreeNode>
-                  <CrystalCluster cluster={recipeTree.item.crystals} />
-                </RecipeTreeNode>
-                {renderIngredient(recipeTree.item)}
+                <CrystalCluster cluster={recipeTree.item.crystals} />
+                {renderIngredient(recipeTree.item, 0)}
               </RecipeTree>
             </RecipeTreeContainer>
           )}

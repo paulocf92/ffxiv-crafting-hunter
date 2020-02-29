@@ -1,10 +1,10 @@
 import styled from 'styled-components/native';
 
 export const Container = styled.View`
-  align-items: center;
   justify-content: center;
-  width: 80px;
-  margin: 1px 5px 5px;
+  min-width: 82px;
+  height: ${props => (props.withCrystals ? '58px' : '36px')};
+  padding: 2px 0;
 `;
 
 export const Item = styled.View`

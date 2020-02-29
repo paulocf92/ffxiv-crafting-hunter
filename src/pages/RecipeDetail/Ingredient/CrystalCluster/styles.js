@@ -3,8 +3,8 @@ import styled from 'styled-components/native';
 export const Container = styled.View`
   align-items: center;
   justify-content: center;
-  width: 80px;
-  margin: 1px 5px 5px;
+  width: 82px;
+  margin: 1px 0;
 `;
 
 export const Crystal = styled.View`

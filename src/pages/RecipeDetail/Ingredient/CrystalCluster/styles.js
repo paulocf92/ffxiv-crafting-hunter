@@ -1,24 +1,26 @@
 import styled from 'styled-components/native';
+import { TouchableOpacity } from 'react-native';
 
 export const Container = styled.View`
   align-items: center;
   justify-content: center;
-  width: 82px;
+  min-width: 80px;
   margin: 1px 0;
 `;
 
-export const Crystal = styled.View`
+export const Crystal = styled(TouchableOpacity).attrs({
+  activeOpacity: 0.4,
+})`
   flex-direction: row;
   background: rgba(150, 150, 150, 0.8);
   border-radius: 4px;
-  padding: 2px 5px;
+  padding: 5px;
   margin-bottom: 2px;
 `;
 
 export const CrystalData = styled.View`
   flex: 1;
   flex-direction: row;
-  align-items: center;
   justify-content: center;
 `;
 

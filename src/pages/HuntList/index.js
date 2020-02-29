@@ -7,7 +7,7 @@ import Storage from '~/services/Storage';
 
 import AsyncSelector from '~/components/AsyncSelector';
 import Loader from '~/components/Loader';
-import HuntItem from '~/components/HuntItem';
+import HuntItem from './HuntItem';
 
 import { Container, List, ClearButton } from './styles';
 

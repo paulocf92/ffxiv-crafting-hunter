@@ -1,4 +1,5 @@
 import styled from 'styled-components/native';
+import { TouchableOpacity } from 'react-native';
 import { RectButton } from 'react-native-gesture-handler';
 
 export const Container = styled.View`
@@ -8,7 +9,9 @@ export const Container = styled.View`
   padding-bottom: 5px;
 `;
 
-export const Delete = styled.TouchableOpacity`
+export const Delete = styled(TouchableOpacity).attrs({
+  activeOpacity: 0.4,
+})`
   justify-content: center;
 `;
 

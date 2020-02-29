@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
-import { View } from 'react-native';
+import { View, Alert } from 'react-native';
 
 import Svg, { Path } from 'react-native-svg';
 
@@ -10,7 +10,6 @@ import Loader from '~/components/Loader';
 import computeSvgGraph from '~/utils/computeSvgGraph';
 
 import Ingredient from './Ingredient';
-import CrystalCluster from './Ingredient/CrystalCluster';
 
 import {
   Container,
@@ -43,22 +42,28 @@ export default function RecipeDetail({ route }) {
     loadRecipe();
   }, [recipe]);
 
-  function renderIngredient(ingredient, depth, parentCrystals) {
+  function handleClickIngredient(ingredient, isCrystal) {
+    const name = isCrystal ? 'Bunch of crystals' : ingredient.name;
+    Alert.alert('Update progress', `Update progress for item '${name}'?`);
+  }
+
+  function renderIngredient(ingredient, parentCrystals) {
     return (
       <View>
         {ingredient.children.map((item, idx) => (
-          <RecipeTreeRow key={item.id}>
+          <RecipeTreeRow key={item.id} spacing={ingredient.depth === 0}>
             <Ingredient
               item={item}
               crystals={idx === 0 ? parentCrystals : null}
+              onClickItem={handleClickIngredient}
             />
 
             {item.children && (
               <>
                 <Svg
-                  width="50"
+                  width="56"
                   height={item.svgHeight}
-                  viewBox={`0 0 50 ${item.svgHeight}`}
+                  viewBox={`0 0 60 ${item.svgHeight}`}
                 >
                   <Path
                     d={item.svgGraph}
@@ -67,7 +72,8 @@ export default function RecipeDetail({ route }) {
                     strokeWidth="2"
                   />
                 </Svg>
-                {renderIngredient(item, item.depth, item.crystals)}
+
+                {renderIngredient(item, item.crystals)}
               </>
             )}
           </RecipeTreeRow>
@@ -91,8 +97,7 @@ export default function RecipeDetail({ route }) {
           {recipeTree.item && (
             <RecipeTreeContainer>
               <RecipeTree>
-                <CrystalCluster cluster={recipeTree.item.crystals} />
-                {renderIngredient(recipeTree.item, 0)}
+                {renderIngredient(recipeTree.item, recipeTree.item.crystals)}
               </RecipeTree>
             </RecipeTreeContainer>
           )}

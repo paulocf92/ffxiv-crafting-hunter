@@ -9,11 +9,15 @@ import {
   CrystalIcon,
 } from './styles';
 
-export default function CrystalCluster({ cluster }) {
+export default function CrystalCluster({ cluster, onClickItem }) {
+  function handleClickItem() {
+    onClickItem(cluster, true);
+  }
+
   return (
     cluster && (
       <Container>
-        <Crystal>
+        <Crystal onPress={handleClickItem}>
           {cluster.map(crystal => (
             <CrystalData key={crystal.id}>
               <CrystalQty>{crystal.totalRequired}</CrystalQty>
@@ -34,4 +38,5 @@ CrystalCluster.propTypes = {
       icon: PropTypes.string,
     }),
   ).isRequired,
+  onClickItem: PropTypes.func.isRequired,
 };

@@ -24,13 +24,14 @@ export const Image = styled.Image`
 `;
 
 export const RecipeTreeContainer = styled.ScrollView.attrs({
-  horizontal: true,
   contentContainerStyle: {
-    flex: 1,
+    flexDirection: 'column',
+    flexGrow: 1,
   },
 })``;
 
 export const RecipeTree = styled.ScrollView.attrs({
+  horizontal: true,
   contentContainerStyle: {
     padding: 10,
   },
@@ -39,4 +40,5 @@ export const RecipeTree = styled.ScrollView.attrs({
 export const RecipeTreeRow = styled.View`
   flex-direction: row;
   align-items: center;
+  margin-bottom: ${props => (props.spacing ? '20px' : 0)};
 `;

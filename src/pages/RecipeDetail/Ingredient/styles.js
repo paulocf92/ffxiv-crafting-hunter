@@ -2,7 +2,7 @@ import styled from 'styled-components/native';
 
 export const Container = styled.View`
   justify-content: center;
-  min-width: 82px;
+  min-width: 80px;
   height: ${props => (props.withCrystals ? '58px' : '36px')};
   padding: 2px 0;
 `;

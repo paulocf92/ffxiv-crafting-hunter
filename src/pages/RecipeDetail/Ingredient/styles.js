@@ -4,7 +4,7 @@ import { TouchableOpacity } from 'react-native';
 export const Container = styled.View`
   justify-content: center;
   width: 200px;
-  height: ${props => (props.withCrystals ? '80px' : '64px')};
+  height: ${props => (props.withCrystals ? '88px' : '64px')};
 `;
 
 export const Item = styled(TouchableOpacity).attrs({

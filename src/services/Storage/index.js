@@ -44,6 +44,11 @@ class FFXIVStorage extends Storage {
     return recipe;
   }
 
+  // eslint-disable-next-line
+  async updateRecipe(id, recipe) {
+    await FFXIVStorage.setItem(`@craftinghunter_recipe_${id}`, recipe);
+  }
+
   async getRecipes() {
     if (this.recipeStorage.length) {
       const recipeKeys = this.recipeStorage.map(

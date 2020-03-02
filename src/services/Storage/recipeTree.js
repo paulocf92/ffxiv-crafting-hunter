@@ -2,6 +2,8 @@
 import api from '~/services/api';
 import RecipeColumns from '~/config/RecipeQueryColumns';
 
+import { computeSvgGraph } from '~/utils/recipeTree';
+
 const MAX_INGREDIENTS = 9;
 const CRYSTALS = [
   /^Earth Shard$/,
@@ -248,10 +250,10 @@ export async function traverseRecipeTree(
   if (depth + 1 === 0) {
     node.root = true;
 
-    // console.tron.log('[node, leafItems]');
-    // console.tron.log([node, leafItems]);
+    // Computed and add svg graph to node
+    const computedNode = computeSvgGraph(node);
 
-    return [node, leafItems];
+    return [computedNode, leafItems];
   }
 
   return node;

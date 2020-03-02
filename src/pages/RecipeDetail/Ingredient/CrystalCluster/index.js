@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import { Alert } from 'react-native';
 
 import {
   Container,
@@ -10,14 +11,25 @@ import {
 } from './styles';
 
 export default function CrystalCluster({ cluster, onClickItem }) {
-  function handleClickItem() {
-    onClickItem(cluster, true);
+  function handleUpdateProgress() {
+    if (onClickItem) {
+      onClickItem(cluster, true);
+    }
+    Alert.alert('Update progress on crystal hunting!');
+  }
+
+  function handleResetProgress() {
+    Alert.alert('Reset progress on crystal hunting!');
   }
 
   return (
     cluster && (
       <Container>
-        <Crystal onPress={handleClickItem}>
+        <Crystal
+          onPress={() => handleUpdateProgress()}
+          onLongPress={() => handleResetProgress()}
+          delayLongPress={800}
+        >
           {cluster.map(crystal => (
             <CrystalData key={crystal.id}>
               <CrystalQty>{crystal.totalRequired}</CrystalQty>
@@ -38,5 +50,9 @@ CrystalCluster.propTypes = {
       icon: PropTypes.string,
     }),
   ).isRequired,
-  onClickItem: PropTypes.func.isRequired,
+  onClickItem: PropTypes.func,
+};
+
+CrystalCluster.defaultProps = {
+  onClickItem: undefined,
 };

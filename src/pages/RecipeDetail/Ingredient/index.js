@@ -1,10 +1,14 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import PropTypes from 'prop-types';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 import CrystalCluster from './CrystalCluster';
 
 import {
   Container,
+  Actions,
+  Action,
+  Data,
   Item,
   ItemData,
   ItemQty,
@@ -13,30 +17,76 @@ import {
   ItemText,
 } from './styles';
 
-export default function Ingredient({ item, crystals, onClickItem }) {
-  function handleClickItem() {
-    onClickItem(item);
+export default function Ingredient({
+  item,
+  crystals,
+  treePath,
+  onUpdateProgress,
+}) {
+  const incrementDisabled = useMemo(
+    () => item.progress === item.totalRequired,
+    [item.progress, item.totalRequired],
+  );
+
+  const decrementDisabled = useMemo(() => item.progress === 0, [item.progress]);
+
+  function handleIncrement(complete = false) {
+    const amount = complete ? item.totalRequired - item.progress : 1;
+    onUpdateProgress(treePath, amount);
+  }
+
+  function handleDecrement(complete = false) {
+    const amount = complete ? -item.progress : -1;
+    onUpdateProgress(treePath, amount);
   }
 
   return (
     item && (
-      <Container withCrystals={!!crystals}>
-        {crystals && (
-          <CrystalCluster cluster={crystals} onClickItem={onClickItem} />
+      <Container>
+        {item.leaf && (
+          <Actions>
+            <Action
+              disabled={incrementDisabled}
+              onPress={() => handleIncrement()}
+              onLongPress={() => handleIncrement(true)}
+              delayLongPress={800}
+            >
+              <Icon
+                name="add-circle"
+                size={32}
+                color={incrementDisabled ? '#ddd' : '#28d77d'}
+              />
+            </Action>
+            <Action
+              disabled={decrementDisabled}
+              onPress={() => handleDecrement()}
+              onLongPress={() => handleDecrement(true)}
+              delayLongPress={800}
+            >
+              <Icon
+                name="remove-circle"
+                size={32}
+                color={decrementDisabled ? '#ddd' : '#F64c75'}
+              />
+            </Action>
+          </Actions>
         )}
-        <Item key={item.id} onPress={handleClickItem}>
-          <ItemData>
-            <ItemQty>{item.totalRequired}</ItemQty>
-            <ItemIcon source={{ uri: item.icon }} />
-            <Progress>
-              <ItemText>
-                {item.name}
-                {'\n'}
-                10/99
-              </ItemText>
-            </Progress>
-          </ItemData>
-        </Item>
+        <Data withCrystals={!!crystals}>
+          {crystals && <CrystalCluster cluster={crystals} />}
+          <Item key={item.id}>
+            <ItemData>
+              <ItemQty>{item.totalRequired}</ItemQty>
+              <ItemIcon source={{ uri: item.icon }} />
+              <Progress>
+                <ItemText>
+                  {item.name}
+                  {'\n'}
+                  {item.progress}/{item.totalRequired}
+                </ItemText>
+              </Progress>
+            </ItemData>
+          </Item>
+        </Data>
       </Container>
     )
   );
@@ -47,10 +97,13 @@ Ingredient.propTypes = {
     id: PropTypes.number,
     name: PropTypes.string,
     totalRequired: PropTypes.number,
+    progress: PropTypes.number,
     icon: PropTypes.string,
+    leaf: PropTypes.bool,
   }).isRequired,
   crystals: PropTypes.arrayOf(PropTypes.shape()),
-  onClickItem: PropTypes.func.isRequired,
+  treePath: PropTypes.arrayOf(PropTypes.number).isRequired,
+  onUpdateProgress: PropTypes.func.isRequired,
 };
 
 Ingredient.defaultProps = {

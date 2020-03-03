@@ -90,8 +90,10 @@ export default function RecipeDetail({ route }) {
     loadRecipe();
   }, [recipe]);
 
-  function handleUpdateProgress(path, amount) {
+  function handleUpdateProgress(path, amount, increase) {
     const item = updateRecipeProgress(recipeTree.item, path, amount);
+    // Evaluate recipe's unique leaves progress
+    item.uniqueProgress += increase;
 
     setRecipeTree({ ...recipeTree, item });
     setTreeUpdated(true);

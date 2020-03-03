@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, Alert } from 'react-native';
 
 import RecipeColumns from '~/config/RecipeQueryColumns';
@@ -17,16 +18,19 @@ export default function HuntList() {
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function load() {
-      const loadRecipes = await Storage.getRecipes();
+  // Load recipes from AsyncStorage when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      async function load() {
+        const loadRecipes = await Storage.getRecipes();
 
-      setRecipes(loadRecipes.sort((a, b) => a.name.localeCompare(b.name)));
-      setLoading(false);
-    }
+        setRecipes(loadRecipes.sort((a, b) => a.name.localeCompare(b.name)));
+        setLoading(false);
+      }
 
-    load();
-  }, []);
+      load();
+    }, []), // eslint-disable-line-no
+  );
 
   async function storeRecipe(id) {
     const response = await api.get(`/recipe/${id}`, {
@@ -35,7 +39,8 @@ export default function HuntList() {
       },
     });
 
-    await Storage.storeRecipe(id, response.data);
+    const stored = await Storage.storeRecipe(id, response.data);
+    return stored;
   }
 
   function handleClear() {
@@ -63,7 +68,6 @@ export default function HuntList() {
       return data.Results.map(item => ({
         id: item.ID,
         name: item.Name,
-        icon: `https://xivapi.com${item.Icon}`,
       }));
     }
 
@@ -95,9 +99,20 @@ export default function HuntList() {
     } else {
       setLoading(true);
 
-      await storeRecipe(current.id);
+      // Catch relevant properties
+      const {
+        id,
+        name,
+        icon,
+        uniqueProgress,
+        uniqueLeaves,
+      } = await storeRecipe(current.id);
+
       setRecipes(
-        [...recipes, current].sort((a, b) => a.name.localeCompare(b.name)),
+        [
+          ...recipes,
+          { id, name, icon, uniqueProgress, uniqueLeaves },
+        ].sort((a, b) => a.name.localeCompare(b.name)),
       );
       setLoading(false);
     }

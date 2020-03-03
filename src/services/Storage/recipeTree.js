@@ -210,6 +210,7 @@ export async function traverseRecipeTree(
           // Leaf already exists, increase it by totalRequired
           if (idx >= 0) {
             leafItems[idx].totalRequired += child.totalRequired;
+            leafItems[idx].unique += 1;
           } else {
             // Otherwise append this child data
             const { id, name, icon, crystal, totalRequired } = child;
@@ -221,6 +222,7 @@ export async function traverseRecipeTree(
               totalRequired,
               progress: 0,
               totalProgress: 0,
+              unique: 1,
             });
 
             // Crystals to the bottom
@@ -249,6 +251,10 @@ export async function traverseRecipeTree(
   // If node is root, return it with leaves, otherwise just return node
   if (depth + 1 === 0) {
     node.root = true;
+
+    const unique = leafItems.reduce((acc, item) => acc + item.unique, 0);
+    node.uniqueLeaves = unique; // Unique leaves for this recipe
+    node.uniqueProgress = 0; // How many unique leaves have been done?
 
     // Computed and add svg graph to node
     const computedNode = computeSvgGraph(node);

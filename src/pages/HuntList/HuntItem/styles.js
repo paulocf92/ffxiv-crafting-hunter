@@ -1,6 +1,13 @@
 import styled from 'styled-components/native';
 import { TouchableOpacity } from 'react-native';
 import { RectButton } from 'react-native-gesture-handler';
+import LinearGradient from 'react-native-linear-gradient';
+
+export const Progress = styled(LinearGradient)`
+  height: 8px;
+  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
+`;
 
 export const Container = styled.View`
   flex: 1;
@@ -15,7 +22,7 @@ export const Delete = styled(TouchableOpacity).attrs({
   justify-content: center;
 `;
 
-export const ItemContainer = styled.View`
+export const ItemContainer = styled(RectButton)`
   flex: 1;
 
   background: #fff;
@@ -23,9 +30,9 @@ export const ItemContainer = styled.View`
   border-radius: 4px;
 `;
 
-export const Item = styled(RectButton)`
+export const Item = styled.View`
   flex-direction: row;
-  padding: 8px;
+  padding: 6px 8px;
 `;
 
 export const Title = styled.Text`

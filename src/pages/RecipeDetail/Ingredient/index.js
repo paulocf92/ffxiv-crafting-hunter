@@ -32,12 +32,18 @@ export default function Ingredient({
 
   function handleIncrement(complete = false) {
     const amount = complete ? item.totalRequired - item.progress : 1;
-    onUpdateProgress(treePath, amount);
+    // Only increase if this amount will equal to total required afterwards
+    const increase = Number(item.progress + amount === item.totalRequired);
+
+    onUpdateProgress(treePath, amount, increase);
   }
 
   function handleDecrement(complete = false) {
     const amount = complete ? -item.progress : -1;
-    onUpdateProgress(treePath, amount);
+    // Only decrease if we had total required previously
+    const decrease = (item.progress === item.totalRequired) * -1;
+
+    onUpdateProgress(treePath, amount, decrease);
   }
 
   return (

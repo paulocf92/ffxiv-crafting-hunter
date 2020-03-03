@@ -28,6 +28,8 @@ class FFXIVStorage extends Storage {
     this.recipeStorage.push(id);
 
     await FFXIVStorage.setItem('@craftinghunter_recipes', this.recipeStorage);
+
+    return item;
   }
 
   async deleteRecipe(id) {
@@ -62,6 +64,8 @@ class FFXIVStorage extends Storage {
           id: parsed.item.id,
           name: parsed.item.name,
           icon: parsed.item.icon,
+          uniqueProgress: parsed.item.uniqueProgress,
+          uniqueLeaves: parsed.item.uniqueLeaves,
         };
       });
 

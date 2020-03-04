@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { Alert } from 'react-native';
 import PropTypes from 'prop-types';
-import { hsl, opacify } from 'polished';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 
@@ -9,7 +8,7 @@ import {
   Container,
   Delete,
   ItemContainer,
-  Progress,
+  ProgressBar,
   Item,
   Title,
   Image,
@@ -18,11 +17,27 @@ import {
 export default function HuntItem({ data, onDelete }) {
   const navigation = useNavigation();
 
-  // Notify progress with varying hues based on recipe unique leaves progress
-  const hue = useMemo(
-    () => Math.floor((data.uniqueProgress / data.uniqueLeaves) * 240),
-    [data],
-  );
+  // Progress bar
+  const progressBar = useMemo(() => {
+    const prog = +(data.uniqueProgress / data.uniqueLeaves).toFixed(2);
+    const locations = [+Math.min(prog + 0.02, 1).toFixed(2)];
+    const colors = ['#fff'];
+
+    if (prog < 0.99) {
+      colors.push('#ccc', '#ccc');
+      locations.push(+Math.min(prog + 0.04, 1).toFixed(2), 1);
+    }
+
+    if (prog > 0.01) {
+      colors.unshift('#51ecb1', '#51ecb1');
+      locations.unshift(0, prog);
+    }
+
+    return {
+      locations,
+      colors,
+    };
+  }, [data]);
 
   function handleDelete() {
     Alert.alert('Delete', `Delete recipe for '${data.name}'?`, [
@@ -60,9 +75,11 @@ export default function HuntItem({ data, onDelete }) {
           />
           <Title>{data.name}</Title>
         </Item>
-        <Progress
-          colors={['rgba(0, 0, 0, 0)', opacify(-0.2, hsl(hue, 0.8, 0.62))]}
-          hue={hue}
+        <ProgressBar
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          locations={progressBar.locations}
+          colors={progressBar.colors}
         />
       </ItemContainer>
     </Container>

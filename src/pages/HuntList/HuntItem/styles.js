@@ -3,7 +3,7 @@ import { TouchableOpacity } from 'react-native';
 import { RectButton } from 'react-native-gesture-handler';
 import LinearGradient from 'react-native-linear-gradient';
 
-export const Progress = styled(LinearGradient)`
+export const ProgressBar = styled(LinearGradient)`
   height: 8px;
   border-bottom-left-radius: 4px;
   border-bottom-right-radius: 4px;

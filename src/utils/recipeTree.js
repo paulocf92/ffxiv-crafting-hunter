@@ -90,39 +90,87 @@ function checkSmallestMilestone(children) {
   return smallest;
 }
 
-export function updateRecipeProgress(item, path, amount) {
+export function updateRecipeProgress(item, path, amount, updateCrystal) {
   if (path.length > 0) {
-    const idx = path.splice(0, 1)[0];
+    const furtherPath = path.slice();
+    const idx = furtherPath.splice(0, 1)[0];
     const children = item.children.filter((_, i) => i !== idx);
 
-    const modified = updateRecipeProgress(item.children[idx], path, amount);
+    const modified = updateRecipeProgress(
+      item.children[idx],
+      furtherPath,
+      amount,
+      updateCrystal,
+    );
 
     // Insert modified child back into array at previous index
     children.splice(idx, 0, modified);
 
-    // For increments (positive value)
-    if (amount > 0) {
-      /**
-       * Only update this item progress if modified child's progress is
-       * divisible by its perRecipe operand, and its progress is > 0.
-       */
-      if (
-        modified.progress > 0 &&
-        modified.progress % modified.perRecipe === 0
-      ) {
+    // Skip nodes verification if we're updating crystals (already done)
+    if (!updateCrystal) {
+      // Crystals milestone
+      const crystals = checkSmallestMilestone(item.crystals);
+
+      // For increments (positive value)
+      if (amount > 0) {
         /**
-         * Item progress is set to be the smallest milestone among this
-         * item's children.
-         * Child milestone = child progress / child perRecipe value
+         * Only update this item progress if modified child's progress is
+         * divisible by its perRecipe operand, and its progress is > 0.
          */
-        item.progress = checkSmallestMilestone(children);
+        if (
+          modified.progress > 0 &&
+          modified.progress % modified.perRecipe === 0
+        ) {
+          /**
+           * 1) Check whether we have smallest number of raw materials OR
+           * crystals which are necessary to complete a recipe.
+           * 2) Factor in items yielded by this recipe x smallest number.
+           * 3) Either this factored-in amount or total required by recipe will
+           * be picked, favoring the smallest (totalRequired).
+           * Eg.: Worsted Yarn recipe yields 3 (recipeYield), but some recipes
+           * may only need 1 (totalRequired).
+           */
+          const smallest = Math.min(checkSmallestMilestone(children), crystals);
+          const nextProgress = Math.min(
+            smallest * item.recipeYield,
+            item.totalRequired,
+          );
+
+          item.progress = nextProgress;
+        }
+      } else {
+        // For decrements (negative value)
+        item.progress = Math.min(checkSmallestMilestone(children), crystals);
       }
-    } else {
-      // For decrements (negative value)
-      item.progress = checkSmallestMilestone(children);
     }
 
     return { ...item, children };
+  }
+
+  if (updateCrystal) {
+    const crystals = item.crystals.map(crystal => ({
+      ...crystal,
+      progress: amount > 0 ? crystal.totalRequired : 0,
+    }));
+
+    /**
+     * Since updating crystals will increase/decrease *all* of the necessary
+     * crystals at once:
+     * => A positive amount means all of them are being completed then it's
+     * required to check children smallest milestone.
+     * => A negative means no required crystals have been collected, thus the
+     * entire recipe progress is at 0.
+     */
+    const smallest = amount > 0 ? checkSmallestMilestone(item.children) : 0;
+    const nextProgress = Math.min(
+      smallest * item.recipeYield,
+      item.totalRequired,
+    );
+
+    item.crystals = crystals;
+    item.progress = nextProgress;
+
+    return item;
   }
 
   item.progress += amount;

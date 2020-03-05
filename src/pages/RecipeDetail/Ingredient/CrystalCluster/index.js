@@ -1,6 +1,5 @@
-import React from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { Alert } from 'react-native';
 
 import {
   Container,
@@ -10,25 +9,40 @@ import {
   CrystalIcon,
 } from './styles';
 
-export default function CrystalCluster({ cluster, onClickItem }) {
-  function handleUpdateProgress() {
-    if (onClickItem) {
-      onClickItem(cluster, true);
-    }
-    Alert.alert('Update progress on crystal hunting!');
-  }
+export default function CrystalCluster({ cluster, onUpdateCrystal }) {
+  const [complete, setComplete] = useState(false);
 
-  function handleResetProgress() {
-    Alert.alert('Reset progress on crystal hunting!');
+  useEffect(() => {
+    const completion = !!cluster.filter(
+      crystal => crystal.progress === crystal.totalRequired,
+    ).length;
+
+    setComplete(completion);
+  }, [cluster]);
+
+  const statusColors = useMemo(() => {
+    const colors = ['#c4c4c4'];
+    colors.push(complete ? '#beff33' : '#c4c4c4');
+
+    return colors;
+  }, [complete]);
+
+  function handleUpdateCrystal() {
+    const toggled = !complete;
+    setComplete(toggled);
+
+    onUpdateCrystal(toggled ? 1 : -1);
   }
 
   return (
     cluster && (
-      <Container>
+      <Container onPress={() => handleUpdateCrystal()}>
         <Crystal
-          onPress={() => handleUpdateProgress()}
-          onLongPress={() => handleResetProgress()}
-          delayLongPress={800}
+          useAngle
+          angle={178}
+          angleCenter={{ x: 0.5, y: 0.5 }}
+          locations={[0, 0.8]}
+          colors={statusColors}
         >
           {cluster.map(crystal => (
             <CrystalData key={crystal.id}>
@@ -50,9 +64,5 @@ CrystalCluster.propTypes = {
       icon: PropTypes.string,
     }),
   ).isRequired,
-  onClickItem: PropTypes.func,
-};
-
-CrystalCluster.defaultProps = {
-  onClickItem: undefined,
+  onUpdateCrystal: PropTypes.func.isRequired,
 };

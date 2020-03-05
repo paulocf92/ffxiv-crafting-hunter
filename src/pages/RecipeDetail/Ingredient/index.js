@@ -30,6 +30,14 @@ export default function Ingredient({
 
   const decrementDisabled = useMemo(() => item.progress === 0, [item.progress]);
 
+  const statusColors = useMemo(() => {
+    const colors = ['#c4c4c4'];
+
+    colors.push(item.progress === item.totalRequired ? '#beff33' : '#c4c4c4');
+
+    return colors;
+  }, [item.progress, item.totalRequired]);
+
   function handleIncrement(complete = false) {
     const amount = complete ? item.totalRequired - item.progress : 1;
     // Only increase if this amount will equal to total required afterwards
@@ -44,6 +52,10 @@ export default function Ingredient({
     const decrease = (item.progress === item.totalRequired) * -1;
 
     onUpdateProgress(treePath, amount, decrease);
+  }
+
+  function handleCrystalCompletion(amount) {
+    onUpdateProgress(treePath, amount, amount, true);
   }
 
   return (
@@ -78,16 +90,26 @@ export default function Ingredient({
           </Actions>
         )}
         <Data withCrystals={!!crystals}>
-          {crystals && <CrystalCluster cluster={crystals} />}
-          <Item key={item.id}>
+          {crystals && (
+            <CrystalCluster
+              cluster={crystals}
+              onUpdateCrystal={handleCrystalCompletion}
+            />
+          )}
+          <Item
+            key={item.id}
+            useAngle
+            angle={178}
+            angleCenter={{ x: 0.5, y: 0.5 }}
+            locations={[0, 0.8]}
+            colors={statusColors}
+          >
             <ItemData>
               <ItemQty>{item.totalRequired}</ItemQty>
               <ItemIcon source={{ uri: item.icon }} />
               <Progress>
                 <ItemText>
-                  {item.name}
-                  {'\n'}
-                  {item.progress}/{item.totalRequired}
+                  {`${item.name}\n${item.progress}/${item.totalRequired}`}
                 </ItemText>
               </Progress>
             </ItemData>

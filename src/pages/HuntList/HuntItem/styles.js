@@ -4,7 +4,7 @@ import { RectButton } from 'react-native-gesture-handler';
 import LinearGradient from 'react-native-linear-gradient';
 
 export const ProgressBar = styled(LinearGradient)`
-  height: 8px;
+  height: 5px;
   border-bottom-left-radius: 4px;
   border-bottom-right-radius: 4px;
 `;

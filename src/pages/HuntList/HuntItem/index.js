@@ -20,15 +20,15 @@ export default function HuntItem({ data, onDelete }) {
   // Progress bar
   const progressBar = useMemo(() => {
     const prog = +(data.uniqueProgress / data.uniqueLeaves).toFixed(2);
-    const locations = [+Math.min(prog + 0.02, 1).toFixed(2)];
+    const locations = [+Math.min(prog > 0 ? prog + 0.02 : 0.01, 1).toFixed(2)];
     const colors = ['#fff'];
 
-    if (prog < 0.99) {
+    if (prog < 0.97) {
       colors.push('#ccc', '#ccc');
       locations.push(+Math.min(prog + 0.04, 1).toFixed(2), 1);
     }
 
-    if (prog > 0.01) {
+    if (prog > 0) {
       colors.unshift('#51ecb1', '#51ecb1');
       locations.unshift(0, prog);
     }

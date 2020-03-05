@@ -1,5 +1,6 @@
 import styled from 'styled-components/native';
 import { TouchableOpacity } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 
 export const Container = styled.View`
   flex-direction: row;
@@ -20,10 +21,9 @@ export const Data = styled.View`
   height: ${props => (props.withCrystals ? '88px' : '64px')};
 `;
 
-export const Item = styled.View`
+export const Item = styled(LinearGradient)`
   flex-direction: row;
   flex-grow: 1;
-  background: rgba(150, 150, 150, 0.8);
   border-radius: 4px;
   padding: 4px;
   margin: 2px 0;

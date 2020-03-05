@@ -1,21 +1,21 @@
 import styled from 'styled-components/native';
 import { TouchableOpacity } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 
-export const Container = styled.View`
+export const Container = styled(TouchableOpacity).attrs({
+  activeOpacity: 0.4,
+})`
   align-items: center;
   justify-content: center;
   min-width: 80px;
   margin: 1px 0;
 `;
 
-export const Crystal = styled(TouchableOpacity).attrs({
-  activeOpacity: 0.4,
-})`
+export const Crystal = styled(LinearGradient)`
   flex-direction: row;
-  background: rgba(150, 150, 150, 0.8);
-  border-radius: 4px;
-  padding: 5px;
   margin-bottom: 2px;
+  padding: 5px;
+  border-radius: 4px;
 `;
 
 export const CrystalData = styled.View`

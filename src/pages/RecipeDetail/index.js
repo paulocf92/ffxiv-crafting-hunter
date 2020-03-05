@@ -90,10 +90,40 @@ export default function RecipeDetail({ route }) {
     loadRecipe();
   }, [recipe]);
 
-  function handleUpdateProgress(path, amount, increase) {
-    const item = updateRecipeProgress(recipeTree.item, path, amount);
-    // Evaluate recipe's unique leaves progress
-    item.uniqueProgress += increase;
+  function handleUpdateProgress(path, amount, increase, isCrystal) {
+    const traversalPath = path.slice();
+
+    // Crystals, unlike ingredients, are located one level above
+    if (isCrystal) {
+      traversalPath.pop();
+    }
+
+    const item = updateRecipeProgress(
+      recipeTree.item,
+      traversalPath,
+      amount,
+      isCrystal,
+    );
+
+    /**
+     * Evaluate recipe's unique leaves progress based on whether they're
+     * crystals or raw ingredients.
+     * => Ingredients will pass amount to be increased in $increase.
+     * => Crystals require falling back to parent to get crystals length and
+     * multiplying by amount which will be 1 or -1.
+     */
+    if (isCrystal) {
+      // Successively reduce path until we achieve parent item containing
+      // amount of crystals
+      const parent = traversalPath.reduce(
+        (acc, i) => acc.children[i],
+        recipeTree.item,
+      );
+
+      item.uniqueProgress += parent.crystals.length * amount;
+    } else {
+      item.uniqueProgress += increase;
+    }
 
     setRecipeTree({ ...recipeTree, item });
     setTreeUpdated(true);

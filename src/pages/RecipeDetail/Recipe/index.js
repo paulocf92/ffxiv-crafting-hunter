@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Alert, BackHandler } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import PropTypes from 'prop-types';
 
 import Svg, { Path } from 'react-native-svg';
@@ -22,7 +22,7 @@ import {
   RecipeTreeRow,
 } from './styles';
 
-export default function RecipeDetail({ route }) {
+export default function Recipe({ route }) {
   const { data: recipe } = route.params;
 
   const navigation = useNavigation();
@@ -67,17 +67,17 @@ export default function RecipeDetail({ route }) {
     return false;
   }, [navigation, treeUpdated, recipeTree]);
 
-  // Add handler upon mounting
-  useEffect(() => {
-    BackHandler.addEventListener('hardwareBackPress', handleBackPress);
-  }, [handleBackPress]);
+  // Upon focusing this screen
+  useFocusEffect(
+    useCallback(() => {
+      // Add event listener to handle back press
+      BackHandler.addEventListener('hardwareBackPress', handleBackPress);
 
-  // Remove handler upon unmounting
-  useEffect(() => {
-    return () => {
-      BackHandler.removeEventListener('hardwareBackPress', handleBackPress);
-    };
-  }, [handleBackPress]);
+      // Screen blur cleanup: remove handler so it affects only this screen
+      return () =>
+        BackHandler.removeEventListener('hardwareBackPress', handleBackPress);
+    }, [handleBackPress]),
+  );
 
   useEffect(() => {
     async function loadRecipe() {
@@ -191,7 +191,7 @@ export default function RecipeDetail({ route }) {
   );
 }
 
-RecipeDetail.propTypes = {
+Recipe.propTypes = {
   route: PropTypes.shape({
     name: PropTypes.string,
     params: PropTypes.shape({

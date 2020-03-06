@@ -6,7 +6,7 @@ export const Container = styled.View`
 
 export const OutputItem = styled.View`
   flex-direction: row;
-  padding: 10px;
+  padding: 8px 10px;
   border: 2px solid #ccc;
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.9);

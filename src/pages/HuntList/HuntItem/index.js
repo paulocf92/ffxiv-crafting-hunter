@@ -61,8 +61,8 @@ export default function HuntItem({ data, onDelete }) {
       </Delete>
       <ItemContainer
         onPress={() =>
-          navigation.navigate('App', {
-            screen: 'RecipeDetail',
+          navigation.navigate('RecipeDetail', {
+            screen: 'Recipe',
             params: { data },
           })
         }

@@ -1,14 +1,19 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { View, Alert, BackHandler } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import PropTypes from 'prop-types';
-
 import Svg, { Path } from 'react-native-svg';
 
-import Storage from '~/services/Storage';
+import storage from '~/services/storage';
 import Loader from '~/components/Loader';
 
 import { updateRecipeProgress } from '~/utils/recipeTree';
+
+import {
+  editRecipeItem,
+  updateRecipeRequest,
+} from '~/store/modules/recipe/actions';
 
 import Ingredient from './Ingredient';
 
@@ -25,6 +30,10 @@ import {
 export default function Recipe({ route }) {
   const { data: recipe } = route.params;
 
+  const isLoading = useSelector(state => state.recipe.loading);
+  const needsRefresh = useSelector(state => state.recipe.refresh);
+  const dispatch = useDispatch();
+
   const navigation = useNavigation();
 
   const [recipeTree, setRecipeTree] = useState({});
@@ -40,11 +49,8 @@ export default function Recipe({ route }) {
           {
             text: 'Yes',
             onPress: async () => {
-              // Yes => silently update recipe and go back
-              const { id } = recipeTree.item;
-              await Storage.updateRecipe(id, recipeTree);
-
-              navigation.goBack();
+              // Yes => silently update recipe, go back based on needsRefresh
+              dispatch(updateRecipeRequest());
             },
           },
           {
@@ -65,7 +71,7 @@ export default function Recipe({ route }) {
 
     // No change has been made, do not block navigation
     return false;
-  }, [navigation, treeUpdated, recipeTree]);
+  }, [dispatch, navigation, treeUpdated]);
 
   // Upon focusing this screen
   useFocusEffect(
@@ -79,16 +85,38 @@ export default function Recipe({ route }) {
     }, [handleBackPress]),
   );
 
+  // Load recipe when component was mounted, and update redux state
   useEffect(() => {
     async function loadRecipe() {
-      const loaded = await Storage.getRecipe(recipe.id);
+      const loaded = await storage.getItem(
+        `@craftinghunter_recipe_${recipe.id}`,
+      );
 
       setRecipeTree(loaded);
+      dispatch(editRecipeItem(loaded.item));
       setLoading(false);
     }
 
     loadRecipe();
-  }, [recipe]);
+  }, [recipe, dispatch]);
+
+  /**
+   * Play loading animation either based on the component state (initial
+   * loading) or redux state (updating recipe in AsyncStorage).
+   */
+  useEffect(() => {
+    setLoading(isLoading || loading);
+  }, [isLoading, loading]);
+
+  /**
+   * Go back only when state requires a refresh, i.e. it's done updating recipe
+   * in AsyncStorage.
+   */
+  useEffect(() => {
+    if (needsRefresh) {
+      navigation.goBack();
+    }
+  }, [needsRefresh, navigation]);
 
   function handleUpdateProgress(path, amount, increase, isCrystal) {
     const traversalPath = path.slice();
@@ -125,7 +153,9 @@ export default function Recipe({ route }) {
       item.uniqueProgress += increase;
     }
 
+    // Save modified item and update redux state, tree has now been updated
     setRecipeTree({ ...recipeTree, item });
+    dispatch(editRecipeItem(item));
     setTreeUpdated(true);
   }
 
@@ -167,25 +197,23 @@ export default function Recipe({ route }) {
 
   return (
     <>
-      {!loading && (
-        <Container>
-          <OutputItem>
-            <Image
-              source={{
-                uri: recipe.icon,
-              }}
-            />
-            <OutputItemText>{recipe.name}</OutputItemText>
-          </OutputItem>
-          {recipeTree.item && (
-            <RecipeTreeContainer>
-              <RecipeTree>
-                {renderIngredient(recipeTree.item, recipeTree.item.crystals)}
-              </RecipeTree>
-            </RecipeTreeContainer>
-          )}
-        </Container>
-      )}
+      <Container>
+        <OutputItem>
+          <Image
+            source={{
+              uri: recipe.icon,
+            }}
+          />
+          <OutputItemText>{recipe.name}</OutputItemText>
+        </OutputItem>
+        {recipeTree?.item && (
+          <RecipeTreeContainer>
+            <RecipeTree>
+              {renderIngredient(recipeTree.item, recipeTree.item.crystals)}
+            </RecipeTree>
+          </RecipeTreeContainer>
+        )}
+      </Container>
       {loading && <Loader />}
     </>
   );

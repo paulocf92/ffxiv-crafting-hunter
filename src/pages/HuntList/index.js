@@ -1,10 +1,7 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, Alert } from 'react-native';
-
-import RecipeColumns from '~/config/RecipeQueryColumns';
-import api from '~/services/api';
-import Storage from '~/services/Storage';
 
 import AsyncSelector from '~/components/AsyncSelector';
 import Loader from '~/components/Loader';
@@ -12,36 +9,34 @@ import HuntItem from './HuntItem';
 
 import { Container, List, ClearButton } from './styles';
 
-Storage.init();
+import {
+  loadRecipesRequest,
+  storeRecipeRequest,
+  deleteRecipeRequest,
+  clearRecipesRequest,
+  resetRecipeProgressRequest,
+} from '~/store/modules/recipe/actions';
 
 export default function HuntList() {
+  const storedRecipes = useSelector(state => state.recipe.recipes);
+  const isLoading = useSelector(state => state.recipe.loading);
+  const dispatch = useDispatch();
+
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Load recipes from AsyncStorage when screen is focused
   useFocusEffect(
     useCallback(() => {
-      async function load() {
-        const loadRecipes = await Storage.getRecipes();
-
-        setRecipes(loadRecipes.sort((a, b) => a.name.localeCompare(b.name)));
-        setLoading(false);
-      }
-
-      load();
-    }, []), // eslint-disable-line-no
+      dispatch(loadRecipesRequest());
+    }, [dispatch]),
   );
 
-  async function storeRecipe(id) {
-    const response = await api.get(`/recipe/${id}`, {
-      params: {
-        columns: RecipeColumns,
-      },
-    });
+  useEffect(() => {
+    setRecipes(storedRecipes);
+  }, [storedRecipes]);
 
-    const stored = await Storage.storeRecipe(id, response.data);
-    return stored;
-  }
+  useEffect(() => setLoading(isLoading), [isLoading]);
 
   function handleClear() {
     if (recipes.length) {
@@ -52,11 +47,8 @@ export default function HuntList() {
         },
         {
           text: 'Yes',
-          onPress: async () => {
-            setLoading(true);
-            await Storage.clearRecipes();
-            setRecipes([]);
-            setLoading(false);
+          onPress: () => {
+            dispatch(clearRecipesRequest());
           },
         },
       ]);
@@ -75,11 +67,12 @@ export default function HuntList() {
   }
 
   async function handleSelected({ current }) {
-    const recipeExists = recipes.filter(recipe => recipe.id === current.id);
+    const recipeExists = !!recipes.filter(recipe => recipe.id === current.id)
+      .length;
 
-    if (recipeExists.length) {
+    if (recipeExists) {
       Alert.alert(
-        'Recipe exists',
+        'Recipe overwrite',
         `Recipe for '${current.name}' has already been added to the list, overwrite progress?`,
         [
           {
@@ -88,42 +81,19 @@ export default function HuntList() {
           },
           {
             text: 'Yes',
-            onPress: async () => {
-              setLoading(true);
-              await Storage.resetProgress(current.id);
-              setLoading(false);
+            onPress: () => {
+              dispatch(resetRecipeProgressRequest(current.id));
             },
           },
         ],
       );
     } else {
-      setLoading(true);
-
-      // Catch relevant properties
-      const {
-        id,
-        name,
-        icon,
-        uniqueProgress,
-        uniqueLeaves,
-      } = await storeRecipe(current.id);
-
-      setRecipes(
-        [
-          ...recipes,
-          { id, name, icon, uniqueProgress, uniqueLeaves },
-        ].sort((a, b) => a.name.localeCompare(b.name)),
-      );
-      setLoading(false);
+      dispatch(storeRecipeRequest(current.id));
     }
   }
 
   async function handleDeleteRecipe({ id }) {
-    const activeRecipes = recipes.filter(recipe => recipe.id !== id);
-
-    await Storage.deleteRecipe(id);
-
-    setRecipes(activeRecipes);
+    dispatch(deleteRecipeRequest(id));
   }
 
   return (

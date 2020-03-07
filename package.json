@@ -1,6 +1,6 @@
 {
   "name": "ffxivcraftinghunter",
-  "version": "0.17",
+  "version": "0.17.2",
   "private": true,
   "scripts": {
     "android": "react-native run-android",

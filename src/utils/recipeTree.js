@@ -211,12 +211,20 @@ export function resetRecipeProgress(recipeItem, baseItems) {
     }
   }
 
+  if (item.crystals) {
+    for (let i = 0; i < item.crystals.length; i += 1) {
+      item.crystals[i] = { ...item.crystals[i], progress: 0, totalProgress: 0 };
+    }
+  }
+
   if (item.depth === 0) {
+    const resetItem = { ...item, uniqueProgress: 0 };
+
     for (let i = 0; i < baseItems.length; i += 1) {
       baseItems[i] = { ...baseItems[i], progress: 0, totalProgress: 0 };
     }
 
-    return { item, baseItems };
+    return { item: resetItem, baseItems };
   }
 
   return item;

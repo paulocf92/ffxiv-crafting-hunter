@@ -5,12 +5,12 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import PropTypes from 'prop-types';
 import Svg, { Path } from 'react-native-svg';
 
-import storage from '~/services/storage';
 import Loader from '~/components/Loader';
 
 import { updateRecipeProgress } from '~/utils/recipeTree';
 
 import {
+  loadSingleRecipeRequest,
   editRecipeItem,
   updateRecipeRequest,
 } from '~/store/modules/recipe/actions';
@@ -30,14 +30,15 @@ import {
 export default function Recipe({ route }) {
   const { data: recipe } = route.params;
 
+  const editingRecipe = useSelector(state => state.recipe.editing.item);
   const isLoading = useSelector(state => state.recipe.loading);
   const needsRefresh = useSelector(state => state.recipe.refresh);
   const dispatch = useDispatch();
 
   const navigation = useNavigation();
 
-  const [recipeTree, setRecipeTree] = useState({});
-  const [loading, setLoading] = useState(true);
+  const [recipeTree, setRecipeTree] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [treeUpdated, setTreeUpdated] = useState(false);
 
   const handleBackPress = useCallback(() => {
@@ -85,28 +86,21 @@ export default function Recipe({ route }) {
     }, [handleBackPress]),
   );
 
-  // Load recipe when component was mounted, and update redux state
+  // Load single recipe upon mounting
   useEffect(() => {
-    async function loadRecipe() {
-      const loaded = await storage.getItem(
-        `@craftinghunter_recipe_${recipe.id}`,
-      );
+    // Load recipe tree
+    dispatch(loadSingleRecipeRequest(recipe.id));
+  }, [dispatch, recipe.id]);
 
-      setRecipeTree(loaded);
-      dispatch(editRecipeItem(loaded.item));
-      setLoading(false);
-    }
-
-    loadRecipe();
-  }, [recipe, dispatch]);
-
-  /**
-   * Play loading animation either based on the component state (initial
-   * loading) or redux state (updating recipe in AsyncStorage).
-   */
+  // Reflect changes to view upon updating recipe
   useEffect(() => {
-    setLoading(isLoading || loading);
-  }, [isLoading, loading]);
+    setRecipeTree(editingRecipe);
+  }, [editingRecipe]);
+
+  // Play loading animation based on redux state
+  useEffect(() => {
+    setLoading(isLoading);
+  }, [isLoading]);
 
   /**
    * Go back only when state requires a refresh, i.e. it's done updating recipe
@@ -127,7 +121,7 @@ export default function Recipe({ route }) {
     }
 
     const item = updateRecipeProgress(
-      recipeTree.item,
+      recipeTree,
       traversalPath,
       amount,
       isCrystal,
@@ -140,22 +134,22 @@ export default function Recipe({ route }) {
      * => Crystals require falling back to parent to get crystals length and
      * multiplying by amount which will be 1 or -1.
      */
+    let uniqueProgress = 0;
     if (isCrystal) {
       // Successively reduce path until we achieve parent item containing
       // amount of crystals
       const parent = traversalPath.reduce(
         (acc, i) => acc.children[i],
-        recipeTree.item,
+        recipeTree,
       );
 
-      item.uniqueProgress += parent.crystals.length * amount;
+      uniqueProgress = item.uniqueProgress + parent.crystals.length * amount;
     } else {
-      item.uniqueProgress += increase;
+      uniqueProgress = item.uniqueProgress + increase;
     }
 
-    // Save modified item and update redux state, tree has now been updated
-    setRecipeTree({ ...recipeTree, item });
-    dispatch(editRecipeItem(item));
+    // Update redux state, tree has now been updated
+    dispatch(editRecipeItem({ ...item, uniqueProgress }));
     setTreeUpdated(true);
   }
 
@@ -206,10 +200,10 @@ export default function Recipe({ route }) {
           />
           <OutputItemText>{recipe.name}</OutputItemText>
         </OutputItem>
-        {recipeTree?.item && (
+        {recipeTree && (
           <RecipeTreeContainer>
             <RecipeTree>
-              {renderIngredient(recipeTree.item, recipeTree.item.crystals)}
+              {renderIngredient(recipeTree, recipeTree.crystals)}
             </RecipeTree>
           </RecipeTreeContainer>
         )}

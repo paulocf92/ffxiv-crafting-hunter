@@ -20,6 +20,8 @@ import {
   clearRecipesFailure,
   resetRecipeProgressSuccess,
   resetRecipeProgressFailure,
+  loadSingleRecipeSuccess,
+  loadSingleRecipeFailure,
 } from './actions';
 
 function* loadRecipes() {
@@ -51,6 +53,18 @@ function* loadRecipes() {
     yield put(loadRecipesSuccess(count, recipes, recipeIds));
   } catch (err) {
     yield put(loadRecipesFailure());
+  }
+}
+
+function* loadSingleRecipe({ payload }) {
+  try {
+    const { id } = payload;
+
+    const recipe = yield call(storage.getItem, `@craftinghunter_recipe_${id}`);
+
+    yield put(loadSingleRecipeSuccess(recipe));
+  } catch (err) {
+    yield put(loadSingleRecipeFailure());
   }
 }
 
@@ -165,6 +179,7 @@ function* resetProgress({ payload }) {
 
 export default all([
   takeLatest('@recipe/LOAD_RECIPES_REQUEST', loadRecipes),
+  takeLatest('@recipe/LOAD_SINGLE_RECIPE_REQUEST', loadSingleRecipe),
   takeLatest('@recipe/STORE_RECIPE_REQUEST', storeRecipe),
   takeLatest('@recipe/DELETE_RECIPE_REQUEST', deleteRecipe),
   takeLatest('@recipe/UPDATE_RECIPE_REQUEST', updateRecipe),

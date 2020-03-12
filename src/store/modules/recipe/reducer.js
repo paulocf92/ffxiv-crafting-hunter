@@ -21,8 +21,18 @@ export default function user(state = INITIAL_STATE, action) {
       case '@recipe/LOAD_RECIPES_SUCCESS': {
         draft.recipes = action.payload.recipes;
         draft.count = action.payload.count;
+        draft.editing = { item: null, baseItems: [] };
         draft.loading = false;
         draft.refresh = false;
+        break;
+      }
+      case '@recipe/LOAD_SINGLE_RECIPE_REQUEST': {
+        draft.loading = true;
+        break;
+      }
+      case '@recipe/LOAD_SINGLE_RECIPE_SUCCESS': {
+        draft.editing = action.payload.recipe;
+        draft.loading = false;
         break;
       }
       case '@recipe/STORE_RECIPE_REQUEST': {
@@ -58,8 +68,8 @@ export default function user(state = INITIAL_STATE, action) {
         break;
       }
       case '@recipe/EDIT_RECIPE_ITEM': {
-        const deepCopy = JSON.parse(JSON.stringify(action.payload.item));
-        draft.editing.item = deepCopy;
+        // const deepCopy = JSON.parse(JSON.stringify(action.payload.item));
+        draft.editing.item = action.payload.item;
         break;
       }
       case '@recipe/EDIT_RECIPE_BASE_ITEMS': {
@@ -79,9 +89,8 @@ export default function user(state = INITIAL_STATE, action) {
         const { uniqueProgress } = recipe;
         draft.recipes[idx].uniqueProgress = uniqueProgress;
 
-        draft.editing = { item: null, baseItems: [] };
-        draft.refresh = true;
         draft.loading = false;
+        draft.refresh = true;
         break;
       }
       case '@recipe/CLEAR_RECIPES_REQUEST': {

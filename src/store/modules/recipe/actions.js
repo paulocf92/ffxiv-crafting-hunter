@@ -57,6 +57,26 @@ export function deleteRecipeFailure() {
   };
 }
 
+export function loadSingleRecipeRequest(id) {
+  return {
+    type: '@recipe/LOAD_SINGLE_RECIPE_REQUEST',
+    payload: { id },
+  };
+}
+
+export function loadSingleRecipeSuccess(recipe) {
+  return {
+    type: '@recipe/LOAD_SINGLE_RECIPE_SUCCESS',
+    payload: { recipe },
+  };
+}
+
+export function loadSingleRecipeFailure() {
+  return {
+    type: '@recipe/LOAD_SINGLE_RECIPE_FAILURE',
+  };
+}
+
 export function editRecipeItem(item) {
   return {
     type: '@recipe/EDIT_RECIPE_ITEM',

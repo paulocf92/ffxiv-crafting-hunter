@@ -131,6 +131,8 @@ export function updateRecipeProgress(item, path, amount, updateCrystal) {
     // Insert modified child back into array at previous index
     children.splice(idx, 0, modified);
 
+    let progress = 0;
+
     // Skip nodes verification if we're updating crystals (already done)
     if (!updateCrystal) {
       // Crystals milestone
@@ -156,20 +158,15 @@ export function updateRecipeProgress(item, path, amount, updateCrystal) {
            * may only need 1 (totalRequired).
            */
           const smallest = Math.min(checkSmallestMilestone(children), crystals);
-          const nextProgress = Math.min(
-            smallest * item.recipeYield,
-            item.totalRequired,
-          );
-
-          item.progress = nextProgress;
+          progress = Math.min(smallest * item.recipeYield, item.totalRequired);
         }
       } else {
         // For decrements (negative value)
-        item.progress = Math.min(checkSmallestMilestone(children), crystals);
+        progress = Math.min(checkSmallestMilestone(children), crystals);
       }
     }
 
-    return { ...item, children };
+    return { ...item, progress, children };
   }
 
   if (updateCrystal) {
@@ -187,19 +184,13 @@ export function updateRecipeProgress(item, path, amount, updateCrystal) {
      * entire recipe progress is at 0.
      */
     const smallest = amount > 0 ? checkSmallestMilestone(item.children) : 0;
-    const nextProgress = Math.min(
-      smallest * item.recipeYield,
-      item.totalRequired,
-    );
+    const progress = Math.min(smallest * item.recipeYield, item.totalRequired);
 
-    item.crystals = crystals;
-    item.progress = nextProgress;
-
-    return item;
+    return { ...item, crystals, progress };
   }
 
-  item.progress += amount;
-  return item;
+  const progress = item.progress + amount;
+  return { ...item, progress };
 }
 
 export function resetRecipeProgress(recipeItem, baseItems) {

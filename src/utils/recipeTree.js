@@ -35,7 +35,9 @@ export function computeSvgGraph(item) {
   let svgGraph = '';
   let firstChildHeight = INGREDIENT_CRYSTAL_HEIGHT / 2;
 
-  const children = item.children?.map((child, idx, arr) => {
+  const ingredients = item.ingredientIds.reduce((acc, id, idx, arr) => {
+    const child = item.ingredients[id];
+
     if (!child.leaf) {
       const newChild = computeSvgGraph(child);
 
@@ -51,7 +53,7 @@ export function computeSvgGraph(item) {
         } else {
           // Walk down some units, draw a 30px h-line
           const firstHalf =
-            newChild.children.length > 1
+            newChild.ingredientIds.length > 1
               ? Math.ceil(newChild.svgHeight / 1.7)
               : INGREDIENT_CRYSTAL_HEIGHT / 2 + 16;
           svgGraph += ` v${firstHalf} h30`;
@@ -64,7 +66,7 @@ export function computeSvgGraph(item) {
         }
       }
 
-      return newChild;
+      return { ...acc, [id]: newChild };
     }
 
     svgHeight += idx === 0 ? INGREDIENT_CRYSTAL_HEIGHT : INGREDIENT_HEIGHT;
@@ -89,17 +91,19 @@ export function computeSvgGraph(item) {
       }
     }
 
-    return child;
-  });
+    return { ...acc, [id]: child };
+  }, {});
 
   // Connect parent line to tree
   const horizontalLine =
-    children.length > 1 ? Math.floor(svgHeight / 2) : firstChildHeight;
+    item.ingredientIds.length > 1
+      ? Math.floor(svgHeight / 2)
+      : firstChildHeight;
   svgGraph = `M0,${horizontalLine} h30 ${svgGraph}`;
 
   const newItem = {
     ...item,
-    children,
+    ingredients,
     svgHeight,
     svgGraph,
   };
@@ -107,9 +111,12 @@ export function computeSvgGraph(item) {
   return newItem;
 }
 
-function checkSmallestMilestone(children) {
+function checkSmallestMilestone(item) {
+  const { componentIds, components } = item;
   const smallest = Math.min(
-    ...children.map(item => Math.floor(item.progress / item.perRecipe)),
+    ...componentIds.map(id =>
+      Math.floor(components[id].progress / components[id].perRecipe),
+    ),
   );
 
   return smallest;
@@ -117,26 +124,34 @@ function checkSmallestMilestone(children) {
 
 export function updateRecipeProgress(item, path, amount, updateCrystal) {
   if (path.length > 0) {
-    const furtherPath = path.slice();
-    const idx = furtherPath.splice(0, 1)[0];
-    const children = item.children.filter((_, i) => i !== idx);
+    // const itemPath = path.slice();
+    // Get item id to map
+    const idx = path.splice(0, 1)[0];
+    // const children = item.children.filter((_, i) => i !== idx);
 
     const modified = updateRecipeProgress(
-      item.children[idx],
-      furtherPath,
+      item.ingredients[idx],
+      path,
       amount,
       updateCrystal,
     );
 
-    // Insert modified child back into array at previous index
-    children.splice(idx, 0, modified);
+    // Insert modified ingredient back into ingredients map
+    const ingredients = { ...item.ingredients, [idx]: modified };
+    // children.splice(idx, 0, modified);
 
     let progress = 0;
 
     // Skip nodes verification if we're updating crystals (already done)
     if (!updateCrystal) {
       // Crystals milestone
-      const crystals = checkSmallestMilestone(item.crystals);
+      const crystals = checkSmallestMilestone({
+        components: item.crystals,
+        componentIds: item.crystalIds,
+      });
+
+      // Aliases
+      const { ingredients: components, ingredientIds: componentIds } = item;
 
       // For increments (positive value)
       if (amount > 0) {
@@ -157,23 +172,37 @@ export function updateRecipeProgress(item, path, amount, updateCrystal) {
            * Eg.: Worsted Yarn recipe yields 3 (recipeYield), but some recipes
            * may only need 1 (totalRequired).
            */
-          const smallest = Math.min(checkSmallestMilestone(children), crystals);
+          const smallest = Math.min(
+            checkSmallestMilestone({ components, componentIds }),
+            crystals,
+          );
           progress = Math.min(smallest * item.recipeYield, item.totalRequired);
         }
       } else {
         // For decrements (negative value)
-        progress = Math.min(checkSmallestMilestone(children), crystals);
+        progress = Math.min(
+          checkSmallestMilestone({ components, componentIds }),
+          crystals,
+        );
       }
     }
 
-    return { ...item, progress, children };
+    return { ...item, progress, ingredients };
   }
 
   if (updateCrystal) {
-    const crystals = item.crystals.map(crystal => ({
-      ...crystal,
-      progress: amount > 0 ? crystal.totalRequired : 0,
-    }));
+    const crystals = item.crystalIds.reduce((acc, id) => {
+      const crystal = {
+        ...item.crystals[id],
+        progress: amount > 0 ? item.crystals[id].totalRequired : 0,
+      };
+
+      return { ...acc, [id]: crystal };
+    }, {});
+    // const crystals = item.crystalIds.map(id => ({
+    //   ...item.crystals[id],
+    //   progress: amount > 0 ? crystal.totalRequired : 0,
+    // }));
 
     /**
      * Since updating crystals will increase/decrease *all* of the necessary
@@ -183,7 +212,9 @@ export function updateRecipeProgress(item, path, amount, updateCrystal) {
      * => A negative means no required crystals have been collected, thus the
      * entire recipe progress is at 0.
      */
-    const smallest = amount > 0 ? checkSmallestMilestone(item.children) : 0;
+    const { ingredients: components, ingredientIds: componentIds } = item;
+    const smallest =
+      amount > 0 ? checkSmallestMilestone({ components, componentIds }) : 0;
     const progress = Math.min(smallest * item.recipeYield, item.totalRequired);
 
     return { ...item, crystals, progress };
@@ -255,9 +286,9 @@ function composeItemData(data, amount, depth, itemData, isRecipe = false) {
 
     return {
       depth: depth + 1,
-      id: itemData ? itemData.id : data.ID,
-      name: itemData ? itemData.name : data.Name,
-      icon: itemData ? itemData.icon : `https://xivapi.com${data.Icon}`,
+      id: itemData?.id ?? data.ID, // ? itemData.id : data.ID,
+      name: itemData?.name ?? data.Name, // ? itemData.name : data.Name,
+      icon: itemData?.icon ?? `https://xivapi.com${data.Icon}`, // ? itemData.icon : `https://xivapi.com${data.Icon}`,
       perRecipe,
       recipeYield,
       totalRequired,
@@ -267,7 +298,6 @@ function composeItemData(data, amount, depth, itemData, isRecipe = false) {
       },
       progress: 0,
       totalProgress: 0,
-      children: [],
       crystal: false,
     };
   }
@@ -292,7 +322,7 @@ function composeItemData(data, amount, depth, itemData, isRecipe = false) {
 
 export async function traverseRecipeTree(
   recipe,
-  leaves = [],
+  leaves = null,
   depth = -1,
   parentAmount,
   itemData,
@@ -302,7 +332,7 @@ export async function traverseRecipeTree(
 
   const node = composeItemData(recipe, parentAmount, depth, itemData, true);
 
-  const leafItems = leaves;
+  const leafItems = leaves === null ? { data: null, ids: [] } : leaves;
 
   /**
    * Loop through this recipe's ingredients and add them to an array based on
@@ -316,6 +346,8 @@ export async function traverseRecipeTree(
         name: recipe[`ItemIngredient${i}`].Name,
         icon: `https://xivapi.com${recipe[`ItemIngredient${i}`].Icon}`,
       };
+
+      const { id } = data;
 
       if (recipe[`ItemIngredientRecipe${i}`]) {
         /**
@@ -377,49 +409,59 @@ export async function traverseRecipeTree(
            */
           child = composeItemData(data, amount, depth);
 
-          const idx = leafItems.findIndex(leaf => leaf.id === child.id);
-
           /**
            * Add item to base items array
            */
           // Leaf already exists, increase it by totalRequired
-          if (idx >= 0) {
-            leafItems[idx].totalRequired += child.totalRequired;
-            leafItems[idx].unique += 1;
+          if (leafItems.data?.[id]) {
+            leafItems.data[id].totalRequired += child.totalRequired;
+            leafItems.data[id].unique += 1;
           } else {
             // Otherwise append this child data
-            const { id, name, icon, crystal, totalRequired } = child;
-            leafItems.push({
-              id,
-              name,
-              icon,
-              crystal,
-              totalRequired,
-              progress: 0,
-              totalProgress: 0,
-              unique: 1,
-            });
+            const { name, icon, crystal, totalRequired } = child;
+            leafItems.data = {
+              ...leafItems.data,
+              [id]: {
+                name,
+                icon,
+                crystal,
+                totalRequired,
+                progress: 0,
+                totalProgress: 0,
+                unique: 1,
+              },
+            };
 
             // Crystals to the bottom
-            leafItems.sort((a, b) => Number(a.crystal) - Number(b.crystal));
+            leafItems.ids = leafItems.ids
+              .concat(id)
+              .sort(
+                (a, b) =>
+                  Number(leafItems.data[a].crystal) -
+                  Number(leafItems.data[b].crystal),
+              );
           }
         }
       }
 
       if (child) {
-        node.children.push(child);
+        if (child.crystal) {
+          // Compose crystals property based on available crystals required by recipe
+          node.crystalIds = node.crystalIds || [];
+          node.crystalIds.push(id);
+          node.crystals = {
+            ...node.crystals,
+            [id]: child,
+          };
+        } else {
+          node.ingredientIds = node.ingredientIds || [];
+          node.ingredientIds.push(id);
+          node.ingredients = {
+            ...node.ingredients,
+            [id]: child,
+          };
+        }
       }
-    }
-  }
-
-  // Compose crystals property based on available crystals required by recipe
-  if (node.children.length) {
-    // Create new prop crystals and remove them from children
-    const crystals = node.children.filter(item => !!item.crystal);
-    node.children = node.children.filter(item => !item.crystal);
-
-    if (crystals.length) {
-      node.crystals = crystals;
     }
   }
 
@@ -427,12 +469,18 @@ export async function traverseRecipeTree(
   if (depth + 1 === 0) {
     node.root = true;
 
-    const unique = leafItems.reduce((acc, item) => acc + item.unique, 0);
+    const unique = leafItems.ids.reduce(
+      (acc, id) => acc + leafItems.data[id].unique,
+      0,
+    );
     node.uniqueLeaves = unique; // Unique leaves for this recipe
     node.uniqueProgress = 0; // How many unique leaves have been done?
 
     // Computed and add svg graph to node
+    console.tron.log('Going to compute svg graph');
     const computedNode = computeSvgGraph(node);
+    console.tron.log({ computedNode });
+    console.tron.log('Computed svg graph');
 
     return [computedNode, leafItems];
   }

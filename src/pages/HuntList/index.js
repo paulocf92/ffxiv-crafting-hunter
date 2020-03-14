@@ -18,11 +18,13 @@ import {
 } from '~/store/modules/recipe/actions';
 
 export default function HuntList() {
+  const storedRecipeIds = useSelector(state => state.recipe.recipeIds);
   const storedRecipes = useSelector(state => state.recipe.recipes);
   const isLoading = useSelector(state => state.recipe.loading);
   const dispatch = useDispatch();
 
-  const [recipes, setRecipes] = useState([]);
+  const [recipes, setRecipes] = useState();
+  const [recipeIds, setRecipeIds] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Load recipes from AsyncStorage when screen is focused
@@ -36,10 +38,14 @@ export default function HuntList() {
     setRecipes(storedRecipes);
   }, [storedRecipes]);
 
+  useEffect(() => {
+    setRecipeIds(storedRecipeIds);
+  }, [storedRecipeIds]);
+
   useEffect(() => setLoading(isLoading), [isLoading]);
 
   function handleClear() {
-    if (recipes.length) {
+    if (recipeIds.length) {
       Alert.alert('Clear recipes', 'Clear all recipes stored in the device?', [
         {
           text: 'No',
@@ -67,8 +73,7 @@ export default function HuntList() {
   }
 
   async function handleSelected({ current }) {
-    const recipeExists = !!recipes.filter(recipe => recipe.id === current.id)
-      .length;
+    const recipeExists = !!recipes[current.id];
 
     if (recipeExists) {
       Alert.alert(
@@ -110,15 +115,19 @@ export default function HuntList() {
           onChangeSelected={handleSelected}
         />
         <List
-          key={recipes.length}
-          data={recipes}
-          keyExtractor={item => String(item.id)}
+          key={recipeIds.length}
+          data={recipeIds}
+          keyExtractor={(_, idx) => String(idx)}
           renderItem={({ item }) => (
-            <HuntItem data={item} onDelete={handleDeleteRecipe} />
+            <HuntItem data={recipes[item]} onDelete={handleDeleteRecipe} />
           )}
         />
 
-        <ClearButton onPress={handleClear} enabled={!!recipes.length} lightText>
+        <ClearButton
+          onPress={handleClear}
+          enabled={!!recipeIds.length}
+          lightText
+        >
           Clear all
         </ClearButton>
       </Container>

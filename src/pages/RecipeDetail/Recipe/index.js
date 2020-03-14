@@ -88,7 +88,6 @@ export default function Recipe({ route }) {
 
   // Load single recipe upon mounting
   useEffect(() => {
-    // Load recipe tree
     dispatch(loadSingleRecipeRequest(recipe.id));
   }, [dispatch, recipe.id]);
 
@@ -122,7 +121,7 @@ export default function Recipe({ route }) {
 
     const item = updateRecipeProgress(
       recipeTree,
-      traversalPath,
+      traversalPath.slice(),
       amount,
       isCrystal,
     );
@@ -139,11 +138,11 @@ export default function Recipe({ route }) {
       // Successively reduce path until we achieve parent item containing
       // amount of crystals
       const parent = traversalPath.reduce(
-        (acc, i) => acc.children[i],
+        (acc, id) => acc.ingredients[id],
         recipeTree,
       );
 
-      uniqueProgress = item.uniqueProgress + parent.crystals.length * amount;
+      uniqueProgress = item.uniqueProgress + parent.crystalIds.length * amount;
     } else {
       uniqueProgress = item.uniqueProgress + increase;
     }
@@ -154,37 +153,50 @@ export default function Recipe({ route }) {
   }
 
   function renderIngredient(ingredient, parentCrystals, treePath = []) {
+    const { ingredients, ingredientIds } = ingredient;
+
     return (
       <View>
-        {ingredient.children.map((item, idx) => (
-          <RecipeTreeRow key={item.id} spacing={ingredient.depth === 0}>
-            <Ingredient
-              item={item}
-              crystals={idx === 0 ? parentCrystals : null}
-              onUpdateProgress={handleUpdateProgress}
-              treePath={[...treePath, idx]}
-            />
+        {ingredientIds.map((id, idx) => {
+          const item = ingredients[id];
 
-            {item.children && (
-              <>
-                <Svg
-                  width="56"
-                  height={item.svgHeight}
-                  viewBox={`0 0 60 ${item.svgHeight}`}
-                >
-                  <Path
-                    d={item.svgGraph}
-                    fill="none"
-                    stroke="#888"
-                    strokeWidth="2"
-                  />
-                </Svg>
+          return (
+            <RecipeTreeRow key={item.id} spacing={ingredient.depth === 0}>
+              <Ingredient
+                item={item}
+                crystals={idx === 0 ? parentCrystals : null}
+                onUpdateProgress={handleUpdateProgress}
+                treePath={[...treePath, item.id]}
+              />
 
-                {renderIngredient(item, item.crystals, [...treePath, idx])}
-              </>
-            )}
-          </RecipeTreeRow>
-        ))}
+              {item.ingredients && (
+                <>
+                  <Svg
+                    width="56"
+                    height={item.svgHeight}
+                    viewBox={`0 0 60 ${item.svgHeight}`}
+                  >
+                    <Path
+                      d={item.svgGraph}
+                      fill="none"
+                      stroke="#888"
+                      strokeWidth="2"
+                    />
+                  </Svg>
+
+                  {renderIngredient(
+                    item,
+                    {
+                      ids: item.crystalIds,
+                      crystals: item.crystals,
+                    },
+                    [...treePath, item.id],
+                  )}
+                </>
+              )}
+            </RecipeTreeRow>
+          );
+        })}
       </View>
     );
   }
@@ -203,7 +215,10 @@ export default function Recipe({ route }) {
         {recipeTree && (
           <RecipeTreeContainer>
             <RecipeTree>
-              {renderIngredient(recipeTree, recipeTree.crystals)}
+              {renderIngredient(recipeTree, {
+                ids: recipeTree.crystalIds,
+                crystals: recipeTree.crystals,
+              })}
             </RecipeTree>
           </RecipeTreeContainer>
         )}

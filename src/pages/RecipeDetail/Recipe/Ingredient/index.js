@@ -129,7 +129,14 @@ Ingredient.propTypes = {
     icon: PropTypes.string,
     leaf: PropTypes.bool,
   }).isRequired,
-  crystals: PropTypes.arrayOf(PropTypes.shape()),
+  crystals: PropTypes.shape({
+    crystals: PropTypes.shape({
+      id: PropTypes.number,
+      totalAmount: PropTypes.number,
+      icon: PropTypes.string,
+    }),
+    ids: PropTypes.arrayOf(PropTypes.number),
+  }),
   treePath: PropTypes.arrayOf(PropTypes.number).isRequired,
   onUpdateProgress: PropTypes.func.isRequired,
 };

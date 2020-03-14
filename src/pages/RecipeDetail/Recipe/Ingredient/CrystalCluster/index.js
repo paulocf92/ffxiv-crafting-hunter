@@ -13,8 +13,9 @@ export default function CrystalCluster({ cluster, onUpdateCrystal }) {
   const [complete, setComplete] = useState(false);
 
   useEffect(() => {
-    const completion = !!cluster.filter(
-      crystal => crystal.progress === crystal.totalRequired,
+    const { crystals, ids } = cluster;
+    const completion = !!ids.filter(
+      id => crystals[id].progress === crystals[id].totalRequired,
     ).length;
 
     setComplete(completion);
@@ -44,10 +45,10 @@ export default function CrystalCluster({ cluster, onUpdateCrystal }) {
           locations={[0, 0.8]}
           colors={statusColors}
         >
-          {cluster.map(crystal => (
-            <CrystalData key={crystal.id}>
-              <CrystalQty>{crystal.totalRequired}</CrystalQty>
-              <CrystalIcon source={{ uri: crystal.icon }} />
+          {cluster.ids.map(id => (
+            <CrystalData key={cluster.crystals[id].id}>
+              <CrystalQty>{cluster.crystals[id].totalRequired}</CrystalQty>
+              <CrystalIcon source={{ uri: cluster.crystals[id].icon }} />
             </CrystalData>
           ))}
         </Crystal>
@@ -57,12 +58,13 @@ export default function CrystalCluster({ cluster, onUpdateCrystal }) {
 }
 
 CrystalCluster.propTypes = {
-  cluster: PropTypes.arrayOf(
-    PropTypes.shape({
+  cluster: PropTypes.shape({
+    crystals: PropTypes.shape({
       id: PropTypes.number,
       totalAmount: PropTypes.number,
       icon: PropTypes.string,
     }),
-  ).isRequired,
+    ids: PropTypes.arrayOf(PropTypes.number),
+  }).isRequired,
   onUpdateCrystal: PropTypes.func.isRequired,
 };

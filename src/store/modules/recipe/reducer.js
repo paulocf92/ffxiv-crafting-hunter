@@ -2,7 +2,8 @@ import produce from 'immer';
 
 const INITIAL_STATE = {
   count: 0,
-  recipes: [],
+  recipes: {},
+  recipeIds: [],
   loading: false,
   editing: {
     item: null,
@@ -21,6 +22,7 @@ export default function user(state = INITIAL_STATE, action) {
       case '@recipe/LOAD_RECIPES_SUCCESS': {
         draft.recipes = action.payload.recipes;
         draft.count = action.payload.count;
+        draft.recipeIds = action.payload.recipeIds;
         draft.editing = { item: null, baseItems: [] };
         draft.loading = false;
         draft.refresh = false;
@@ -40,11 +42,13 @@ export default function user(state = INITIAL_STATE, action) {
         break;
       }
       case '@recipe/STORE_RECIPE_SUCCESS': {
-        const recipes = [...draft.recipes, action.payload.recipe].sort((a, b) =>
-          a.name.localeCompare(b.name),
-        );
+        const recipes = {
+          ...draft.recipes,
+          [action.payload.recipe.id]: action.payload.recipe,
+        };
 
         draft.recipes = recipes;
+        draft.recipeIds = action.payload.sortedIds;
         draft.count += 1;
         draft.loading = false;
         break;
@@ -55,20 +59,13 @@ export default function user(state = INITIAL_STATE, action) {
         break;
       }
       case '@recipe/DELETE_RECIPE_SUCCESS': {
-        const idx = draft.recipes.findIndex(
-          recipe => recipe.id === action.payload.id,
-        );
-
-        if (idx >= 0) {
-          draft.recipes.splice(idx, 1);
-          draft.count -= 1;
-        }
-
+        delete draft.recipes[action.payload.id];
+        draft.recipeIds = action.payload.newIds;
+        draft.count -= 1;
         draft.loading = false;
         break;
       }
       case '@recipe/EDIT_RECIPE_ITEM': {
-        // const deepCopy = JSON.parse(JSON.stringify(action.payload.item));
         draft.editing.item = action.payload.item;
         break;
       }
@@ -99,7 +96,8 @@ export default function user(state = INITIAL_STATE, action) {
       }
       case '@recipe/CLEAR_RECIPES_SUCCESS': {
         draft.count = 0;
-        draft.recipes = [];
+        draft.recipes = {};
+        draft.recipeIds = [];
         draft.loading = false;
         break;
       }
@@ -108,12 +106,8 @@ export default function user(state = INITIAL_STATE, action) {
         break;
       }
       case '@recipe/RESET_RECIPE_PROGRESS_SUCCESS': {
-        const idx = draft.recipes.findIndex(
-          recipe => recipe.id === action.payload.id,
-        );
-
         // Reset this recipe's unique leaves' progress
-        draft.recipes[idx].uniqueProgress = 0;
+        draft.recipes[action.payload.id].uniqueProgress = 0;
 
         draft.loading = false;
         break;

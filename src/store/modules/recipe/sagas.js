@@ -26,26 +26,34 @@ import {
 
 function* loadRecipes() {
   try {
+    // yield call(storage.setItem, '@craftinghunter_recipes', []);
+    // yield call(storage.removeItem, '@craftinghunter_recipe_null');
+
     const recipeIds = yield call(storage.getItem, '@craftinghunter_recipes');
     const count = recipeIds.length;
 
-    let recipes = [];
+    let recipes = {};
 
     if (count) {
       const recipeKeys = recipeIds.map(id => `@craftinghunter_recipe_${id}`);
 
-      recipes = (yield call(storage.multiGet, recipeKeys)).map(recipe => {
-        const { item } = JSON.parse(recipe[1]);
-        const { id, name, icon, uniqueProgress, uniqueLeaves } = item;
+      recipes = (yield call(storage.multiGet, recipeKeys)).reduce(
+        (acc, recipe) => {
+          const { item } = JSON.parse(recipe[1]);
+          const { id, name, icon, uniqueProgress, uniqueLeaves } = item;
 
-        return {
-          id,
-          name,
-          icon,
-          uniqueProgress,
-          uniqueLeaves,
-        };
-      });
+          acc[id] = {
+            id,
+            name,
+            icon,
+            uniqueProgress,
+            uniqueLeaves,
+          };
+
+          return acc;
+        },
+        {},
+      );
     } else {
       yield call(storage.setItem, '@craftinghunter_recipes', []);
     }
@@ -89,10 +97,15 @@ function* storeRecipe({ payload }) {
 
       // Sort recipes (old + new) by name, then retrieve only their ids
       // This keeps ids sorted by recipe names before saving them
-      const recipes = yield select(state => state.recipe.recipes);
-      const sortedIds = [...recipes, item]
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map(recipe => recipe.id);
+      const recipeIds = yield select(state => state.recipe.recipeIds);
+      const recipes = yield select(state => ({
+        ...state.recipe.recipes,
+        [id]: item,
+      }));
+
+      const sortedIds = [...recipeIds, id].sort((a, b) =>
+        recipes[a].name.localeCompare(recipes[b].name),
+      );
 
       yield call(storage.setItem, '@craftinghunter_recipes', sortedIds);
 
@@ -100,13 +113,16 @@ function* storeRecipe({ payload }) {
       const { name, icon, uniqueProgress, uniqueLeaves } = item;
 
       yield put(
-        storeRecipeSuccess({
-          id,
-          name,
-          icon,
-          uniqueProgress,
-          uniqueLeaves,
-        }),
+        storeRecipeSuccess(
+          {
+            id,
+            name,
+            icon,
+            uniqueProgress,
+            uniqueLeaves,
+          },
+          sortedIds,
+        ),
       );
     }
   } catch (err) {
@@ -119,14 +135,14 @@ function* deleteRecipe({ payload }) {
   try {
     const { id } = payload;
 
-    const ids = yield call(storage.getItem, '@craftinghunter_recipes');
+    const ids = yield select(state => state.recipe.recipeIds);
     const newIds = ids.filter(recipeId => recipeId !== id);
 
     yield call(storage.setItem, '@craftinghunter_recipes', newIds);
 
     yield call(storage.removeItem, `@craftinghunter_recipe_${id}`);
 
-    yield put(deleteRecipeSuccess(id));
+    yield put(deleteRecipeSuccess(id, newIds));
   } catch (err) {
     yield put(deleteRecipeFailure());
   }

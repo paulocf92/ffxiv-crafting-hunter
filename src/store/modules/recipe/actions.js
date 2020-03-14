@@ -24,10 +24,10 @@ export function storeRecipeRequest(id) {
   };
 }
 
-export function storeRecipeSuccess(recipe) {
+export function storeRecipeSuccess(recipe, sortedIds) {
   return {
     type: '@recipe/STORE_RECIPE_SUCCESS',
-    payload: { recipe },
+    payload: { recipe, sortedIds },
   };
 }
 
@@ -44,10 +44,10 @@ export function deleteRecipeRequest(id) {
   };
 }
 
-export function deleteRecipeSuccess(id) {
+export function deleteRecipeSuccess(id, newIds) {
   return {
     type: '@recipe/DELETE_RECIPE_SUCCESS',
-    payload: { id },
+    payload: { id, newIds },
   };
 }
 

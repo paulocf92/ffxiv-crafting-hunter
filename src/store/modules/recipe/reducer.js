@@ -9,7 +9,7 @@ const INITIAL_STATE = {
     item: null,
     baseItems: [],
   },
-  refresh: true,
+  refresh: false,
 };
 
 export default function user(state = INITIAL_STATE, action) {
@@ -70,8 +70,7 @@ export default function user(state = INITIAL_STATE, action) {
         break;
       }
       case '@recipe/EDIT_RECIPE_BASE_ITEMS': {
-        const deepCopy = JSON.parse(JSON.stringify(action.payload.baseItems));
-        draft.editing.baseItems = deepCopy;
+        draft.editing.baseItems = action.payload.baseItems;
         break;
       }
       case '@recipe/UPDATE_RECIPE_REQUEST': {
@@ -79,12 +78,10 @@ export default function user(state = INITIAL_STATE, action) {
         break;
       }
       case '@recipe/UPDATE_RECIPE_SUCCESS': {
-        const recipe = draft.editing.item;
-        const idx = draft.recipes.findIndex(r => r.id === recipe.id);
+        const { id, uniqueProgress } = draft.editing.item;
 
         // Update this recipe's unique leaves' progress
-        const { uniqueProgress } = recipe;
-        draft.recipes[idx].uniqueProgress = uniqueProgress;
+        draft.recipes[id].uniqueProgress = uniqueProgress;
 
         draft.loading = false;
         draft.refresh = true;

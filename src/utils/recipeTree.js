@@ -111,8 +111,11 @@ export function computeSvgGraph(item) {
   return newItem;
 }
 
-function checkSmallestMilestone(item) {
-  const { componentIds, components } = item;
+function checkSmallestMilestone(item, crystal = false) {
+  const [components, componentIds] = crystal
+    ? [item.crystals, item.crystalIds]
+    : [item.ingredients, item.ingredientIds];
+
   const smallest = Math.min(
     ...componentIds.map(id =>
       Math.floor(components[id].progress / components[id].perRecipe),
@@ -123,11 +126,10 @@ function checkSmallestMilestone(item) {
 }
 
 export function updateRecipeProgress(item, path, amount, updateCrystal) {
+  // Visit all nodes while we're descending path
   if (path.length > 0) {
-    // const itemPath = path.slice();
     // Get item id to map
     const idx = path.splice(0, 1)[0];
-    // const children = item.children.filter((_, i) => i !== idx);
 
     const modified = updateRecipeProgress(
       item.ingredients[idx],
@@ -136,61 +138,41 @@ export function updateRecipeProgress(item, path, amount, updateCrystal) {
       updateCrystal,
     );
 
+    // Progress starts off as current
+    let { progress } = item;
+
     // Insert modified ingredient back into ingredients map
     const ingredients = { ...item.ingredients, [idx]: modified };
-    // children.splice(idx, 0, modified);
-
-    let progress = 0;
 
     // Skip nodes verification if we're updating crystals (already done)
     if (!updateCrystal) {
       // Crystals milestone
-      const crystals = checkSmallestMilestone({
-        components: item.crystals,
-        componentIds: item.crystalIds,
-      });
+      const crystals = checkSmallestMilestone(item, true);
 
-      // Aliases
-      const { ingredients: components, ingredientIds: componentIds } = item;
-
-      // For increments (positive value)
-      if (amount > 0) {
-        /**
-         * Only update this item progress if modified child's progress is
-         * divisible by its perRecipe operand, and its progress is > 0.
-         */
-        if (
-          modified.progress > 0 &&
-          modified.progress % modified.perRecipe === 0
-        ) {
-          /**
-           * 1) Check whether we have smallest number of raw materials OR
-           * crystals which are necessary to complete a recipe.
-           * 2) Factor in items yielded by this recipe x smallest number.
-           * 3) Either this factored-in amount or total required by recipe will
-           * be picked, favoring the smallest (totalRequired).
-           * Eg.: Worsted Yarn recipe yields 3 (recipeYield), but some recipes
-           * may only need 1 (totalRequired).
-           */
-          const smallest = Math.min(
-            checkSmallestMilestone({ components, componentIds }),
-            crystals,
-          );
-          progress = Math.min(smallest * item.recipeYield, item.totalRequired);
-        }
-      } else {
-        // For decrements (negative value)
-        progress = Math.min(
-          checkSmallestMilestone({ components, componentIds }),
-          crystals,
-        );
-      }
+      /**
+       * 1) Check whether we have smallest number of raw materials OR
+       * crystals which are necessary to complete a recipe.
+       * 2) Factor in items yielded by this recipe x smallest number.
+       * 3) Either this factored-in amount or total required by recipe will
+       * be picked, favoring the smallest (totalRequired).
+       * Eg.: Worsted Yarn recipe yields 3 (recipeYield), but some recipes
+       * may only need 1 (totalRequired).
+       */
+      const smallest = Math.min(
+        checkSmallestMilestone({
+          ingredientIds: item.ingredientIds,
+          ingredients,
+        }),
+        crystals,
+      );
+      progress = Math.min(smallest * item.recipeYield, item.totalRequired);
     }
 
     return { ...item, progress, ingredients };
   }
 
   if (updateCrystal) {
+    // Update all crystals, either by resetting or completing progress
     const crystals = item.crystalIds.reduce((acc, id) => {
       const crystal = {
         ...item.crystals[id],
@@ -199,57 +181,83 @@ export function updateRecipeProgress(item, path, amount, updateCrystal) {
 
       return { ...acc, [id]: crystal };
     }, {});
-    // const crystals = item.crystalIds.map(id => ({
-    //   ...item.crystals[id],
-    //   progress: amount > 0 ? crystal.totalRequired : 0,
-    // }));
 
     /**
      * Since updating crystals will increase/decrease *all* of the necessary
      * crystals at once:
      * => A positive amount means all of them are being completed then it's
-     * required to check children smallest milestone.
+     * required to check raw materials smallest milestone.
      * => A negative means no required crystals have been collected, thus the
      * entire recipe progress is at 0.
      */
-    const { ingredients: components, ingredientIds: componentIds } = item;
-    const smallest =
-      amount > 0 ? checkSmallestMilestone({ components, componentIds }) : 0;
+    const smallest = amount > 0 ? checkSmallestMilestone(item) : 0;
     const progress = Math.min(smallest * item.recipeYield, item.totalRequired);
 
     return { ...item, crystals, progress };
   }
 
+  // Raw material progress update, simply update it preserving immutability
   const progress = item.progress + amount;
   return { ...item, progress };
 }
 
-export function resetRecipeProgress(recipeItem, baseItems) {
-  const item = { ...recipeItem, progress: 0, totalProgress: 0 };
+export function resetRecipeProgress(recipeItem, recipeBaseItems) {
+  const resetItem = { ...recipeItem, progress: 0, totalProgress: 0 };
+  let ingredients = null;
+  let crystals = null;
 
-  if (item.children) {
-    for (let i = 0; i < item.children.length; i += 1) {
-      item.children[i] = resetRecipeProgress(item.children[i]);
-    }
+  // Reset progress on ingredients and crystals by constructing a new object
+  if (resetItem.ingredients) {
+    ingredients = resetItem.ingredientIds.reduce((acc, id) => {
+      const ingredient = resetRecipeProgress(resetItem.ingredients[id]);
+
+      return { ...acc, [id]: ingredient };
+    }, {});
   }
 
-  if (item.crystals) {
-    for (let i = 0; i < item.crystals.length; i += 1) {
-      item.crystals[i] = { ...item.crystals[i], progress: 0, totalProgress: 0 };
-    }
+  if (resetItem.crystals) {
+    crystals = resetItem.crystalIds.reduce((acc, id) => {
+      const crystal = {
+        ...resetItem.crystals[id],
+        progress: 0,
+        totalProgress: 0,
+      };
+
+      return { ...acc, [id]: crystal };
+    }, {});
   }
 
-  if (item.depth === 0) {
-    const resetItem = { ...item, uniqueProgress: 0 };
+  if (resetItem.depth === 0) {
+    // For root item, attach new ingredients/crystals
+    const item = {
+      ...resetItem,
+      ingredients,
+      crystals,
+      uniqueProgress: 0,
+    };
 
-    for (let i = 0; i < baseItems.length; i += 1) {
-      baseItems[i] = { ...baseItems[i], progress: 0, totalProgress: 0 };
-    }
+    // Construct new recipe items' data with reset progress (ids are unchanged)
+    const data = recipeBaseItems.ids.reduce((acc, id) => {
+      const baseItem = {
+        ...recipeBaseItems.data[id],
+        progress: 0,
+        totalProgress: 0,
+      };
 
-    return { item: resetItem, baseItems };
+      return { ...acc, [id]: baseItem };
+    }, {});
+
+    return { item, baseItems: { ...recipeBaseItems, data } };
   }
 
-  return item;
+  // Leaf items have no ingredients/crystals
+  return recipeItem.leaf
+    ? { ...resetItem }
+    : {
+        ...resetItem,
+        ingredients,
+        crystals,
+      };
 }
 
 async function verifySubRecipe(name) {
@@ -477,10 +485,7 @@ export async function traverseRecipeTree(
     node.uniqueProgress = 0; // How many unique leaves have been done?
 
     // Computed and add svg graph to node
-    console.tron.log('Going to compute svg graph');
     const computedNode = computeSvgGraph(node);
-    console.tron.log({ computedNode });
-    console.tron.log('Computed svg graph');
 
     return [computedNode, leafItems];
   }

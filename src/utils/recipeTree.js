@@ -3,6 +3,7 @@ import api from '~/services/api';
 import RecipeColumns from '~/config/RecipeQueryColumns';
 
 const MAX_INGREDIENTS = 9;
+const INGREDIENTS_ARRAY = [...Array(MAX_INGREDIENTS).keys()];
 const CRYSTALS = [
   /^Earth Shard$/,
   /^Earth Crystal$/,
@@ -260,166 +261,167 @@ export function resetRecipeProgress(recipeItem, recipeBaseItems) {
       };
 }
 
-async function verifySubRecipe(name) {
-  // Skip checking crystals
-  if (CRYSTALS.some(rx => rx.test(name))) {
-    return null;
-  }
-
+// Many thanks to karashiiro#1000 for the catch
+async function verifyRecipeExistence(ids) {
+  // Verify if any of these items has a recipe
   const response = await api.get(
-    `/search?string=${name}&indexes=Recipe&string_algo=match`,
+    `/Item?ids=${ids.join(',')}&columns=Recipes,ID`,
   );
 
-  const recipeId = response?.data?.Results?.[0]?.ID ?? null;
+  // Look up for recipes for every craftable item
+  const recipes = await Promise.all(
+    response.data.Results.map(async item => {
+      const { ID: id } = item;
+      const recipeId = item.Recipes?.[0]?.ID ?? null;
 
-  let recipe = null;
+      if (recipeId) {
+        const resp = await api.get(`/recipe/${recipeId}`, {
+          params: {
+            columns: RecipeColumns,
+          },
+        });
 
-  // It has a recipe
-  if (recipeId) {
-    recipe = await api.get(`/recipe/${recipeId}`, {
-      params: {
-        columns: RecipeColumns,
-      },
-    });
-  }
+        return { id, data: resp.data };
+      }
 
-  return recipe?.data ?? null;
+      return { id, data: null };
+    }),
+  );
+
+  return recipes;
 }
 
-function composeItemData(data, amount, depth, itemData, isRecipe = false) {
-  if (isRecipe) {
-    const perRecipe = amount?.perRecipe ?? 1;
-    const recipeYield = amount?.recipeYield ?? 1;
-    const totalRequired = amount?.totalRequired ?? 1;
+function composeItemData(
+  ingredient,
+  recipe,
+  amount = {},
+  depth,
+  isRecipe = false,
+) {
+  // * Raw item data
+  // Extract data from ingredient
+  const { ID: id, Name: name, Icon, ClassJob = {} } = ingredient;
 
-    return {
-      depth: depth + 1,
-      id: itemData?.id ?? data.ID, // ? itemData.id : data.ID,
-      name: itemData?.name ?? data.Name, // ? itemData.name : data.Name,
-      icon: itemData?.icon ?? `https://xivapi.com${data.Icon}`, // ? itemData.icon : `https://xivapi.com${data.Icon}`,
-      perRecipe,
-      recipeYield,
-      totalRequired,
-      discipline: {
-        icon: `https://xivapi.com${data.ClassJob.Icon}`,
-        name: data.ClassJob.NameEnglish,
-      },
-      progress: 0,
-      totalProgress: 0,
-      crystal: false,
-    };
-  }
+  // * Recipe data
+  // Extract crafting data from ingredient if existent, otherwise fall back to
+  // recipe or return  null
+  const {
+    Icon: craftIcon = recipe?.ClassJob?.Icon ?? null,
+    NameEnglish: craftName = recipe?.ClassJob?.NameEnglish ?? null,
+  } = ClassJob;
+  // Extract yield from recipe if existent
+  const { AmountResult: output = 1 } = recipe || {};
+  const { perRecipe = 1, recipeYield = output, totalRequired = 1 } = amount;
 
-  const { id, name, icon } = data;
-  const { perRecipe, totalRequired } = amount;
-  const crystal = CRYSTALS.some(rx => rx.test(name));
+  const crystal = !isRecipe ? CRYSTALS.some(rx => rx.test(name)) : false;
 
-  return {
-    depth: depth + 2,
+  const composed = {
+    depth: depth + 1 + Number(!isRecipe),
     id,
     name,
-    icon,
+    icon: `https://xivapi.com${Icon}`,
     perRecipe,
     totalRequired,
+    ...(isRecipe
+      ? {
+          recipeYield,
+          discipline: {
+            icon: `https://xivapi.com${craftIcon}`,
+            name: craftName,
+          },
+          crystals: {},
+          ingredients: {},
+        }
+      : {}),
     progress: 0,
     totalProgress: 0,
     crystal,
-    leaf: true,
   };
+
+  return composed;
 }
 
 export async function traverseRecipeTree(
+  ingredient,
   recipe,
   leaves = null,
   depth = -1,
   parentAmount,
-  itemData,
 ) {
-  const parentYield = parentAmount?.recipeYield ?? 1;
-  const parentTotalRequired = parentAmount?.totalRequired ?? 1;
-
-  const node = composeItemData(recipe, parentAmount, depth, itemData, true);
+  const node = composeItemData(ingredient, recipe, parentAmount, depth, true);
+  const { recipeYield: parentYield, totalRequired: parentTotalRequired } = node;
 
   const leafItems = leaves === null ? { data: null, ids: [] } : leaves;
 
-  /**
-   * Loop through this recipe's ingredients and add them to an array based on
-   * whether it's a recipe or not
-   */
-  for (let i = 0; i <= MAX_INGREDIENTS; i += 1) {
-    if (recipe[`ItemIngredient${i}`] !== null) {
-      let child = null;
-      const data = {
-        id: recipe[`ItemIngredient${i}`].ID,
-        name: recipe[`ItemIngredient${i}`].Name,
-        icon: `https://xivapi.com${recipe[`ItemIngredient${i}`].Icon}`,
-      };
+  // * Keep track of nodes whose depth is >= 3
+  const verifyLeaves = [];
 
-      const { id } = data;
+  const recipeTree = recipe || ingredient;
 
-      if (recipe[`ItemIngredientRecipe${i}`]) {
-        /**
-         * Case #1: This recipe is contained within the first request, traverse
-         * it further down.
-         */
-        const recipeYield =
-          recipe[`ItemIngredientRecipe${i}`]?.[0]?.AmountResult ?? 1;
+  // * Keep ingredients in recipe order
+  const crystalIds = [];
+  const ingredientIds = [];
+  INGREDIENTS_ARRAY.forEach(idx => {
+    const item = recipeTree[`ItemIngredient${idx}`];
 
-        child = await traverseRecipeTree(
-          recipe[`ItemIngredientRecipe${i}`][0],
-          leafItems, // Pass down to look for more base ingredients
-          depth + 1,
-          {
-            perRecipe: recipe[`AmountIngredient${i}`],
-            recipeYield,
-            totalRequired: recipe[`AmountIngredient${i}`] * parentTotalRequired,
-          },
-          data,
-        );
+    if (item !== null) {
+      if (idx <= MAX_INGREDIENTS - 2) {
+        ingredientIds.push(item.ID);
       } else {
-        // If it's not a recipe received from initial request...
+        crystalIds.push(item.ID);
+      }
+    }
+  });
+  node.ingredientIds = ingredientIds;
+  node.crystalIds = crystalIds;
+
+  // * Recursively traverse down the tree until there are no items to check
+  await Promise.all(
+    INGREDIENTS_ARRAY.slice().map(async idx => {
+      if (recipeTree[`ItemIngredient${idx}`] !== null) {
+        let child = null;
+        const id = recipeTree[`ItemIngredient${idx}`].ID;
         const amount = {
-          perRecipe: recipe[`AmountIngredient${i}`],
+          perRecipe: recipeTree[`AmountIngredient${idx}`],
           /**
            * Modular math to prevent attributing wrong amount to recipes
            * whose yield is greater than 1 (eg. 2, 3) but only a subset is
            * required (i.e. amount required not divisible by its yield).
            */
           totalRequired:
-            parentTotalRequired % parentYield === 0 && parentYield > 1
-              ? recipe[`AmountIngredient${i}`] *
-                (parentTotalRequired / parentYield)
-              : recipe[`AmountIngredient${i}`] * parentTotalRequired,
+            parentYield > 1
+              ? recipeTree[`AmountIngredient${idx}`] *
+                Math.ceil(parentTotalRequired / parentYield)
+              : recipeTree[`AmountIngredient${idx}`] * parentTotalRequired,
         };
 
-        const subRecipe = await verifySubRecipe(data.name);
-
-        /**
-         * Case #2: Verify if this item is a recipe by requesting once again.
-         * This async function prevents looking for crystals.
-         *
-         * To-Do: Find a better way to prevent additional requests, besides
-         * regex'ing for shards/crystals/clusters names.
-         */
-        if (subRecipe) {
-          const recipeYield = subRecipe.AmountResult ?? 1;
-
+        // It's a recipe
+        if (recipeTree[`ItemIngredientRecipe${idx}`]) {
           child = await traverseRecipeTree(
-            subRecipe,
+            recipeTree[`ItemIngredient${idx}`],
+            recipeTree[`ItemIngredientRecipe${idx}`][0],
             leafItems, // Pass down to look for more base ingredients
             depth + 1,
-            { ...amount, recipeYield },
-            data,
+            amount,
           );
         } else {
-          /**
-           * Case #3: This is a raw item (i.e. not composed of anything)
-           */
-          child = composeItemData(data, amount, depth);
+          // It looks like a raw item
+          child = composeItemData(
+            recipeTree[`ItemIngredient${idx}`],
+            null,
+            amount,
+            depth,
+          );
 
-          /**
-           * Add item to base items array
-           */
+          // Children deeper than or equal to 3 that aren't crystal must be
+          // checked against api
+          if (child.depth >= 3 && !child.crystal) {
+            verifyLeaves.push(id);
+          } else {
+            child = { ...child, leaf: true };
+          }
+
+          // * Add item to base items array
           // Leaf already exists, increase it by totalRequired
           if (leafItems.data?.[id]) {
             leafItems.data[id].totalRequired += child.totalRequired;
@@ -440,51 +442,74 @@ export async function traverseRecipeTree(
               },
             };
 
-            // Crystals to the bottom
-            leafItems.ids = leafItems.ids
-              .concat(id)
-              .sort(
-                (a, b) =>
-                  Number(leafItems.data[a].crystal) -
-                  Number(leafItems.data[b].crystal),
-              );
+            leafItems.ids = [...leafItems.ids, id];
+          }
+        }
+
+        if (child) {
+          if (child.crystal) {
+            node.crystals[id] = child;
+          } else {
+            node.ingredients[id] = child;
           }
         }
       }
+    }),
+  );
 
-      if (child) {
-        if (child.crystal) {
-          // Compose crystals property based on available crystals required by recipe
-          node.crystalIds = node.crystalIds || [];
-          node.crystalIds.push(id);
-          node.crystals = {
-            ...node.crystals,
-            [id]: child,
-          };
+  // * Last verification to check if raw items are actually sub-recipes or not
+  if (verifyLeaves.length) {
+    const recipes = await verifyRecipeExistence(verifyLeaves);
+
+    // Await all possible tree traversals to resolve
+    await Promise.all(
+      recipes.map(async item => {
+        const { id, data } = item;
+        const {
+          perRecipe,
+          totalRequired,
+          depth: ingredientDepth,
+        } = node.ingredients[id];
+
+        // When data exists this child is a recipe, then look further down
+        if (data) {
+          node.ingredients[id] = await traverseRecipeTree(
+            { ...data },
+            null,
+            leafItems,
+            ingredientDepth - 1,
+            {
+              perRecipe,
+              totalRequired,
+            },
+            true,
+          );
         } else {
-          node.ingredientIds = node.ingredientIds || [];
-          node.ingredientIds.push(id);
-          node.ingredients = {
-            ...node.ingredients,
-            [id]: child,
-          };
+          node.ingredients[id].leaf = true;
         }
-      }
-    }
+      }),
+    );
   }
 
   // If node is root, return it with leaves, otherwise just return node
   if (depth + 1 === 0) {
     node.root = true;
 
+    // Crystals to the end of list
+    leafItems.ids = leafItems.ids.sort(
+      (a, b) =>
+        Number(leafItems.data[a].crystal) - Number(leafItems.data[b].crystal),
+    );
+
+    // Unique leaves for this recipe
     const unique = leafItems.ids.reduce(
       (acc, id) => acc + leafItems.data[id].unique,
       0,
     );
-    node.uniqueLeaves = unique; // Unique leaves for this recipe
-    node.uniqueProgress = 0; // How many unique leaves have been done?
+    node.uniqueLeaves = unique;
+    node.uniqueProgress = 0;
 
-    // Computed and add svg graph to node
+    // Compute and add svg graph to node
     const computedNode = computeSvgGraph(node);
 
     return [computedNode, leafItems];

@@ -30,15 +30,13 @@ import {
 export default function Recipe({ route }) {
   const { data: recipe } = route.params;
 
-  const editingRecipe = useSelector(state => state.recipe.editing.item);
-  const isLoading = useSelector(state => state.recipe.loading);
+  const recipeTree = useSelector(state => state.recipe.editing.item);
+  const loading = useSelector(state => state.recipe.loading);
   const needsRefresh = useSelector(state => state.recipe.refresh);
   const dispatch = useDispatch();
 
   const navigation = useNavigation();
 
-  const [recipeTree, setRecipeTree] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [treeUpdated, setTreeUpdated] = useState(false);
 
   const handleBackPress = useCallback(() => {
@@ -90,16 +88,6 @@ export default function Recipe({ route }) {
   useEffect(() => {
     dispatch(loadSingleRecipeRequest(recipe.id));
   }, [dispatch, recipe.id]);
-
-  // Reflect changes to view upon updating recipe
-  useEffect(() => {
-    setRecipeTree(editingRecipe);
-  }, [editingRecipe]);
-
-  // Play loading animation based on redux state
-  useEffect(() => {
-    setLoading(isLoading);
-  }, [isLoading]);
 
   /**
    * Go back only when state requires a refresh, i.e. it's done updating recipe

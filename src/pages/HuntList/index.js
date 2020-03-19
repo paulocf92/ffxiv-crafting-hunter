@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, Alert } from 'react-native';
@@ -18,14 +18,10 @@ import {
 } from '~/store/modules/recipe/actions';
 
 export default function HuntList() {
-  const storedRecipeIds = useSelector(state => state.recipe.recipeIds);
-  const storedRecipes = useSelector(state => state.recipe.recipes);
-  const isLoading = useSelector(state => state.recipe.loading);
+  const recipes = useSelector(state => state.recipe.recipes);
+  const recipeIds = useSelector(state => state.recipe.recipeIds);
+  const loading = useSelector(state => state.recipe.loading);
   const dispatch = useDispatch();
-
-  const [recipes, setRecipes] = useState();
-  const [recipeIds, setRecipeIds] = useState([]);
-  const [loading, setLoading] = useState(true);
 
   // Load recipes from AsyncStorage when screen is focused
   useFocusEffect(
@@ -33,16 +29,6 @@ export default function HuntList() {
       dispatch(loadRecipesRequest());
     }, [dispatch]),
   );
-
-  useEffect(() => {
-    setRecipes(storedRecipes);
-  }, [storedRecipes]);
-
-  useEffect(() => {
-    setRecipeIds(storedRecipeIds);
-  }, [storedRecipeIds]);
-
-  useEffect(() => setLoading(isLoading), [isLoading]);
 
   function handleClear() {
     if (recipeIds.length) {

@@ -300,7 +300,9 @@ function composeItemData(
 ) {
   // * Raw item data
   // Extract data from ingredient
-  const { ID: id, Name: name, Icon, ClassJob = {} } = ingredient;
+  const { Name: name, Icon, ClassJob = {} } = ingredient;
+  // For recipes id is contained in itemResult, otherwise it's in ingredient
+  const { ID: id } = ingredient.ItemResult || ingredient;
 
   // * Recipe data
   // Extract crafting data from ingredient if existent, otherwise fall back to

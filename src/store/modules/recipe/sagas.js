@@ -33,7 +33,7 @@ import {
 function* loadRecipes() {
   try {
     // yield call(storage.setItem, '@craftinghunter_recipes', []);
-    // yield call(storage.removeItem, '@craftinghunter_recipe_null');
+    // yield call(storage.removeItem, '@craftinghunter_recipe_32109');
 
     const recipeIds = yield call(storage.getItem, '@craftinghunter_recipes');
     const count = recipeIds.length;
@@ -46,9 +46,10 @@ function* loadRecipes() {
       recipes = (yield call(storage.multiGet, recipeKeys)).reduce(
         (acc, recipe) => {
           const { item } = JSON.parse(recipe[1]);
-          const { id, name, icon, uniqueProgress, uniqueLeaves } = item;
+          const { key, id, name, icon, uniqueProgress, uniqueLeaves } = item;
 
-          acc[id] = {
+          acc[key] = {
+            key,
             id,
             name,
             icon,
@@ -84,9 +85,9 @@ function* loadSingleRecipe({ payload }) {
 
 function* storeRecipe({ payload }) {
   try {
-    const { id } = payload;
+    const { key } = payload;
 
-    const response = yield call(api.get, `/recipe/${id}`, {
+    const response = yield call(api.get, `/recipe/${key}`, {
       params: {
         columns: RecipeColumns,
       },
@@ -96,7 +97,7 @@ function* storeRecipe({ payload }) {
       const [item, baseItems] = yield call(traverseRecipeTree, response.data);
 
       // Store new recipe
-      yield call(storage.setItem, `@craftinghunter_recipe_${id}`, {
+      yield call(storage.setItem, `@craftinghunter_recipe_${key}`, {
         item,
         baseItems,
       });
@@ -106,22 +107,23 @@ function* storeRecipe({ payload }) {
       const recipeIds = yield select(state => state.recipe.recipeIds);
       const recipes = yield select(state => ({
         ...state.recipe.recipes,
-        [id]: item,
+        [key]: item,
       }));
 
-      const sortedIds = [...recipeIds, id].sort((a, b) =>
+      const sortedIds = [...recipeIds, key].sort((a, b) =>
         recipes[a].name.localeCompare(recipes[b].name),
       );
 
       yield call(storage.setItem, '@craftinghunter_recipes', sortedIds);
 
       // Only get properties relevant to main hunt list
-      const { name, icon, uniqueProgress, uniqueLeaves } = item;
+      const { id, name, icon, uniqueProgress, uniqueLeaves } = item;
 
       yield put(
         storeRecipeSuccess(
           {
             id,
+            key,
             name,
             icon,
             uniqueProgress,
@@ -188,9 +190,9 @@ function* editRecipeItem({ payload }) {
 function* updateRecipe() {
   try {
     const editingRecipe = yield select(state => state.recipe.editing);
-    const { id } = editingRecipe.item;
+    const { key } = editingRecipe.item;
 
-    yield call(storage.setItem, `@craftinghunter_recipe_${id}`, editingRecipe);
+    yield call(storage.setItem, `@craftinghunter_recipe_${key}`, editingRecipe);
 
     yield put(updateRecipeSuccess());
   } catch (err) {

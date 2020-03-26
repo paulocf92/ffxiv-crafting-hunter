@@ -17,10 +17,10 @@ export function loadRecipesFailure() {
   };
 }
 
-export function storeRecipeRequest(id) {
+export function storeRecipeRequest(key) {
   return {
     type: '@recipe/STORE_RECIPE_REQUEST',
-    payload: { id },
+    payload: { key },
   };
 }
 

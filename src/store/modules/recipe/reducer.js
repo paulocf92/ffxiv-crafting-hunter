@@ -47,7 +47,7 @@ export default function user(state = INITIAL_STATE, action) {
       case '@recipe/STORE_RECIPE_SUCCESS': {
         const recipes = {
           ...draft.recipes,
-          [action.payload.recipe.id]: action.payload.recipe,
+          [action.payload.recipe.key]: action.payload.recipe,
         };
 
         draft.recipes = recipes;
@@ -91,10 +91,10 @@ export default function user(state = INITIAL_STATE, action) {
         break;
       }
       case '@recipe/UPDATE_RECIPE_SUCCESS': {
-        const { id, uniqueProgress } = draft.editing.item;
+        const { key, uniqueProgress } = draft.editing.item;
 
         // Update this recipe's unique leaves' progress
-        draft.recipes[id].uniqueProgress = uniqueProgress;
+        draft.recipes[key].uniqueProgress = uniqueProgress;
 
         draft.loading = false;
         draft.performNavigation = true;

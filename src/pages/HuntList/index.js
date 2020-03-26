@@ -83,7 +83,7 @@ export default function HuntList() {
     }
   }
 
-  async function handleDeleteRecipe({ id }) {
+  async function handleDeleteRecipe(id) {
     dispatch(deleteRecipeRequest(id));
   }
 

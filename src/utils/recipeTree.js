@@ -474,6 +474,7 @@ export async function traverseRecipeTree(
   // If node is root, return it with leaves, otherwise just return node
   if (depth + 1 === 0) {
     node.root = true;
+    node.key = ingredient.ID;
 
     // Crystals to the end of list
     leafItems.ids = leafItems.ids.sort(

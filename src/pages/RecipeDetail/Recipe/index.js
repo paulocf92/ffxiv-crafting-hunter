@@ -84,8 +84,8 @@ export default function Recipe({ route }) {
 
   // Load single recipe upon mounting
   useEffect(() => {
-    dispatch(loadSingleRecipeRequest(recipe.id));
-  }, [dispatch, recipe.id]);
+    dispatch(loadSingleRecipeRequest(recipe.key));
+  }, [dispatch, recipe.key]);
 
   /**
    * Perform navigation back only when state requires it, i.e. it's done

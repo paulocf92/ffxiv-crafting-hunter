@@ -48,7 +48,7 @@ export default function HuntItem({ data, onDelete }) {
       {
         text: 'Yes',
         onPress: () => {
-          onDelete(data);
+          onDelete(data.key);
         },
       },
     ]);
@@ -88,6 +88,7 @@ export default function HuntItem({ data, onDelete }) {
 
 HuntItem.propTypes = {
   data: PropTypes.shape({
+    key: PropTypes.number,
     name: PropTypes.string,
     icon: PropTypes.string,
     uniqueProgress: PropTypes.number,

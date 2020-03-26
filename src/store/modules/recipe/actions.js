@@ -77,6 +77,31 @@ export function loadSingleRecipeFailure() {
   };
 }
 
+export function editRecipeItemRequest(
+  path,
+  amount,
+  uniqueIncrease,
+  updateCrystal = false,
+) {
+  return {
+    type: '@recipe/EDIT_RECIPE_ITEM_REQUEST',
+    payload: { path, amount, uniqueIncrease, updateCrystal },
+  };
+}
+
+export function editRecipeItemSuccess(item) {
+  return {
+    type: '@recipe/EDIT_RECIPE_ITEM_SUCCESS',
+    payload: { item },
+  };
+}
+
+export function editRecipeItemFailure() {
+  return {
+    type: '@recipe/EDIT_RECIPE_ITEM_FAILURE',
+  };
+}
+
 export function editRecipeItem(item) {
   return {
     type: '@recipe/EDIT_RECIPE_ITEM',

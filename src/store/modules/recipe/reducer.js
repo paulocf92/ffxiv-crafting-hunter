@@ -5,11 +5,13 @@ const INITIAL_STATE = {
   recipes: {},
   recipeIds: [],
   loading: false,
+  busy: false,
+  updated: false,
   editing: {
     item: null,
     baseItems: [],
   },
-  refresh: false,
+  performNavigation: false,
 };
 
 export default function user(state = INITIAL_STATE, action) {
@@ -25,7 +27,7 @@ export default function user(state = INITIAL_STATE, action) {
         draft.recipeIds = action.payload.recipeIds;
         draft.editing = { item: null, baseItems: [] };
         draft.loading = false;
-        draft.refresh = false;
+        draft.performNavigation = false;
         break;
       }
       case '@recipe/LOAD_SINGLE_RECIPE_REQUEST': {
@@ -34,6 +36,7 @@ export default function user(state = INITIAL_STATE, action) {
       }
       case '@recipe/LOAD_SINGLE_RECIPE_SUCCESS': {
         draft.editing = action.payload.recipe;
+        draft.updated = false;
         draft.loading = false;
         break;
       }
@@ -65,6 +68,16 @@ export default function user(state = INITIAL_STATE, action) {
         draft.loading = false;
         break;
       }
+      case '@recipe/EDIT_RECIPE_ITEM_REQUEST': {
+        draft.busy = true;
+        draft.updated = true;
+        break;
+      }
+      case '@recipe/EDIT_RECIPE_ITEM_SUCCESS': {
+        draft.editing.item = action.payload.item;
+        draft.busy = false;
+        break;
+      }
       case '@recipe/EDIT_RECIPE_ITEM': {
         draft.editing.item = action.payload.item;
         break;
@@ -84,7 +97,7 @@ export default function user(state = INITIAL_STATE, action) {
         draft.recipes[id].uniqueProgress = uniqueProgress;
 
         draft.loading = false;
-        draft.refresh = true;
+        draft.performNavigation = true;
         break;
       }
       case '@recipe/CLEAR_RECIPES_REQUEST': {

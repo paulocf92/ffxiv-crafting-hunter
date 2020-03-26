@@ -1,8 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import PropTypes from 'prop-types';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 import CrystalCluster from './CrystalCluster';
+
+import { editRecipeItemRequest } from '~/store/modules/recipe/actions';
 
 import {
   Container,
@@ -17,12 +20,17 @@ import {
   ItemText,
 } from './styles';
 
-export default function Ingredient({
-  item,
-  crystals,
-  treePath,
-  onUpdateProgress,
-}) {
+export default function Ingredient({ item, crystals, treePath }) {
+  const busy = useSelector(state => state.recipe.busy);
+  const [crystalPath, setCrystalPath] = useState([]);
+
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    // Crystals are updated all at once, hence it requires walking up the tree
+    setCrystalPath(treePath.slice(0, -1));
+  }, [treePath]);
+
   const incrementDisabled = useMemo(
     () => item.progress === item.totalRequired,
     [item.progress, item.totalRequired],
@@ -41,21 +49,23 @@ export default function Ingredient({
   function handleIncrement(complete = false) {
     const amount = complete ? item.totalRequired - item.progress : 1;
     // Only increase if this amount will equal to total required afterwards
-    const increase = Number(item.progress + amount === item.totalRequired);
+    const uniqueIncrease = Number(
+      item.progress + amount === item.totalRequired,
+    );
 
-    onUpdateProgress(treePath, amount, increase);
+    dispatch(editRecipeItemRequest(treePath, amount, uniqueIncrease));
   }
 
   function handleDecrement(complete = false) {
     const amount = complete ? -item.progress : -1;
     // Only decrease if we had total required previously
-    const decrease = (item.progress === item.totalRequired) * -1;
+    const uniqueDecrease = (item.progress === item.totalRequired) * -1;
 
-    onUpdateProgress(treePath, amount, decrease);
+    dispatch(editRecipeItemRequest(treePath, amount, uniqueDecrease));
   }
 
   function handleCrystalCompletion(amount) {
-    onUpdateProgress(treePath, amount, amount, true);
+    dispatch(editRecipeItemRequest(crystalPath, amount, amount, true));
   }
 
   return (
@@ -64,7 +74,7 @@ export default function Ingredient({
         {item.leaf && (
           <Actions>
             <Action
-              disabled={incrementDisabled}
+              disabled={incrementDisabled || busy}
               onPress={() => handleIncrement()}
               onLongPress={() => handleIncrement(true)}
               delayLongPress={800}
@@ -76,7 +86,7 @@ export default function Ingredient({
               />
             </Action>
             <Action
-              disabled={decrementDisabled}
+              disabled={decrementDisabled || busy}
               onPress={() => handleDecrement()}
               onLongPress={() => handleDecrement(true)}
               delayLongPress={800}
@@ -138,7 +148,6 @@ Ingredient.propTypes = {
     ids: PropTypes.arrayOf(PropTypes.number),
   }),
   treePath: PropTypes.arrayOf(PropTypes.number).isRequired,
-  onUpdateProgress: PropTypes.func.isRequired,
 };
 
 Ingredient.defaultProps = {

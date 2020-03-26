@@ -112,14 +112,12 @@ export function computeSvgGraph(item) {
   return newItem;
 }
 
-function checkSmallestMilestone(item, crystal = false) {
-  const [components, componentIds] = crystal
-    ? [item.crystals, item.crystalIds]
-    : [item.ingredients, item.ingredientIds];
-
+function checkSmallestMilestone(item) {
   const smallest = Math.min(
-    ...componentIds.map(id =>
-      Math.floor(components[id].progress / components[id].perRecipe),
+    ...item.ingredientIds.map(id =>
+      Math.floor(
+        item.ingredients[id].progress / item.ingredients[id].perRecipe,
+      ),
     ),
   );
 
@@ -127,9 +125,8 @@ function checkSmallestMilestone(item, crystal = false) {
 }
 
 export function updateRecipeProgress(item, path, amount, updateCrystal) {
-  // Visit all nodes while we're descending path
+  // Path reaches 0 when we're at an actual item
   if (path.length > 0) {
-    // Get item id to map
     const idx = path.splice(0, 1)[0];
 
     const modified = updateRecipeProgress(
@@ -139,41 +136,31 @@ export function updateRecipeProgress(item, path, amount, updateCrystal) {
       updateCrystal,
     );
 
-    // Progress starts off as current
     let { progress } = item;
 
-    // Insert modified ingredient back into ingredients map
     const ingredients = { ...item.ingredients, [idx]: modified };
 
-    // Skip nodes verification if we're updating crystals (already done)
-    if (!updateCrystal) {
-      // Crystals milestone
-      const crystals = checkSmallestMilestone(item, true);
+    // Check if either crystals milestone or sub-ingredients is the smallest
+    // Crystals milestone is either full or zero, and can be derived from first
+    const crystal = item.crystals[item.crystalIds[0]];
+    const crystalMilestone = crystal.progress / crystal.perRecipe;
 
-      /**
-       * 1) Check whether we have smallest number of raw materials OR
-       * crystals which are necessary to complete a recipe.
-       * 2) Factor in items yielded by this recipe x smallest number.
-       * 3) Either this factored-in amount or total required by recipe will
-       * be picked, favoring the smallest (totalRequired).
-       * Eg.: Worsted Yarn recipe yields 3 (recipeYield), but some recipes
-       * may only need 1 (totalRequired).
-       */
-      const smallest = Math.min(
-        checkSmallestMilestone({
-          ingredientIds: item.ingredientIds,
-          ingredients,
-        }),
-        crystals,
-      );
-      progress = Math.min(smallest * item.recipeYield, item.totalRequired);
-    }
+    const smallest = Math.min(
+      checkSmallestMilestone({
+        ingredientIds: item.ingredientIds,
+        ingredients, // Evaluate modified ingredients
+      }),
+      crystalMilestone,
+    );
+
+    progress = Math.min(smallest * item.recipeYield, item.totalRequired);
 
     return { ...item, progress, ingredients };
   }
 
+  // We reached a raw item/crystal, update accordingly
   if (updateCrystal) {
-    // Update all crystals, either by resetting or completing progress
+    // Recreate crystals either completing them entirely or resetting them
     const crystals = item.crystalIds.reduce((acc, id) => {
       const crystal = {
         ...item.crystals[id],
@@ -183,21 +170,12 @@ export function updateRecipeProgress(item, path, amount, updateCrystal) {
       return { ...acc, [id]: crystal };
     }, {});
 
-    /**
-     * Since updating crystals will increase/decrease *all* of the necessary
-     * crystals at once:
-     * => A positive amount means all of them are being completed then it's
-     * required to check raw materials smallest milestone.
-     * => A negative means no required crystals have been collected, thus the
-     * entire recipe progress is at 0.
-     */
     const smallest = amount > 0 ? checkSmallestMilestone(item) : 0;
     const progress = Math.min(smallest * item.recipeYield, item.totalRequired);
 
     return { ...item, crystals, progress };
   }
 
-  // Raw material progress update, simply update it preserving immutability
   const progress = item.progress + amount;
   return { ...item, progress };
 }
@@ -301,7 +279,7 @@ function composeItemData(
   // * Raw item data
   // Extract data from ingredient
   const { Name: name, Icon, ClassJob = {} } = ingredient;
-  // For recipes id is contained in itemResult, otherwise it's in ingredient
+  // For recipes, id is contained in itemResult, otherwise it's in ingredient
   const { ID: id } = ingredient.ItemResult || ingredient;
 
   // * Recipe data

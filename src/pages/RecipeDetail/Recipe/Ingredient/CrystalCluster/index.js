@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import PropTypes from 'prop-types';
 
 import {
@@ -10,6 +11,7 @@ import {
 } from './styles';
 
 export default function CrystalCluster({ cluster, onUpdateCrystal }) {
+  const busy = useSelector(state => state.recipe.busy);
   const [complete, setComplete] = useState(false);
 
   useEffect(() => {
@@ -37,7 +39,7 @@ export default function CrystalCluster({ cluster, onUpdateCrystal }) {
 
   return (
     cluster && (
-      <Container onPress={() => handleUpdateCrystal()}>
+      <Container onPress={() => handleUpdateCrystal()} disabled={busy}>
         <Crystal
           useAngle
           angle={178}

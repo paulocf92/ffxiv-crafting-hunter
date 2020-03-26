@@ -2,7 +2,11 @@ import { call, select, put, all, takeLatest } from 'redux-saga/effects';
 import { Alert } from 'react-native';
 
 import RecipeColumns from '~/config/RecipeQueryColumns';
-import { traverseRecipeTree, resetRecipeProgress } from '~/utils/recipeTree';
+import {
+  traverseRecipeTree,
+  resetRecipeProgress,
+  updateRecipeProgress,
+} from '~/utils/recipeTree';
 
 import api from '~/services/api';
 import storage from '~/services/storage';
@@ -22,6 +26,8 @@ import {
   resetRecipeProgressFailure,
   loadSingleRecipeSuccess,
   loadSingleRecipeFailure,
+  editRecipeItemSuccess,
+  editRecipeItemFailure,
 } from './actions';
 
 function* loadRecipes() {
@@ -148,6 +154,37 @@ function* deleteRecipe({ payload }) {
   }
 }
 
+function* editRecipeItem({ payload }) {
+  try {
+    const { path, amount, uniqueIncrease, updateCrystal } = payload;
+    const { item } = yield select(state => state.recipe.editing);
+
+    const edited = updateRecipeProgress(item, path, amount, updateCrystal);
+
+    /**
+     * Evaluate recipe's unique leaves progress based on whether they're
+     * crystals or raw ingredients.
+     * If item/crystal is to be increased, uniqueIncrease will be 1/-1, it will
+     * be 0 otherwise (unchanged).
+     */
+    let uniqueProgress = 0;
+    if (updateCrystal) {
+      // Successively reduce path until we achieve parent item containing
+      // amount of crystals
+      const parent = path.reduce((acc, id) => acc.ingredients[id], item);
+
+      uniqueProgress =
+        item.uniqueProgress + parent.crystalIds.length * uniqueIncrease;
+    } else {
+      uniqueProgress = item.uniqueProgress + uniqueIncrease;
+    }
+
+    yield put(editRecipeItemSuccess({ ...edited, uniqueProgress }));
+  } catch (err) {
+    yield put(editRecipeItemFailure);
+  }
+}
+
 function* updateRecipe() {
   try {
     const editingRecipe = yield select(state => state.recipe.editing);
@@ -201,4 +238,5 @@ export default all([
   takeLatest('@recipe/UPDATE_RECIPE_REQUEST', updateRecipe),
   takeLatest('@recipe/CLEAR_RECIPES_REQUEST', clearRecipes),
   takeLatest('@recipe/RESET_RECIPE_PROGRESS_REQUEST', resetProgress),
+  takeLatest('@recipe/EDIT_RECIPE_ITEM_REQUEST', editRecipeItem),
 ]);

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { View, Alert, BackHandler } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -7,11 +7,8 @@ import Svg, { Path } from 'react-native-svg';
 
 import Loader from '~/components/Loader';
 
-import { updateRecipeProgress } from '~/utils/recipeTree';
-
 import {
   loadSingleRecipeRequest,
-  editRecipeItem,
   updateRecipeRequest,
 } from '~/store/modules/recipe/actions';
 
@@ -32,15 +29,16 @@ export default function Recipe({ route }) {
 
   const recipeTree = useSelector(state => state.recipe.editing.item);
   const loading = useSelector(state => state.recipe.loading);
-  const needsRefresh = useSelector(state => state.recipe.refresh);
+  const updated = useSelector(state => state.recipe.updated);
+  const performNavigation = useSelector(
+    state => state.recipe.performNavigation,
+  );
   const dispatch = useDispatch();
 
   const navigation = useNavigation();
 
-  const [treeUpdated, setTreeUpdated] = useState(false);
-
   const handleBackPress = useCallback(() => {
-    if (treeUpdated) {
+    if (updated) {
       Alert.alert(
         'Unsaved Progress',
         'You have updated your hunting progress, would you like to save it?',
@@ -70,7 +68,7 @@ export default function Recipe({ route }) {
 
     // No change has been made, do not block navigation
     return false;
-  }, [dispatch, navigation, treeUpdated]);
+  }, [dispatch, navigation, updated]);
 
   // Upon focusing this screen
   useFocusEffect(
@@ -90,55 +88,14 @@ export default function Recipe({ route }) {
   }, [dispatch, recipe.id]);
 
   /**
-   * Go back only when state requires a refresh, i.e. it's done updating recipe
-   * in AsyncStorage.
+   * Perform navigation back only when state requires it, i.e. it's done
+   * updating recipe in AsyncStorage.
    */
   useEffect(() => {
-    if (needsRefresh) {
+    if (performNavigation) {
       navigation.goBack();
     }
-  }, [needsRefresh, navigation]);
-
-  function handleUpdateProgress(path, amount, increase, isCrystal) {
-    const traversalPath = path.slice();
-
-    // Crystals, unlike ingredients, are located one level above
-    if (isCrystal) {
-      traversalPath.pop();
-    }
-
-    const item = updateRecipeProgress(
-      recipeTree,
-      traversalPath.slice(),
-      amount,
-      isCrystal,
-    );
-
-    /**
-     * Evaluate recipe's unique leaves progress based on whether they're
-     * crystals or raw ingredients.
-     * => Ingredients will pass amount to be increased in $increase.
-     * => Crystals require falling back to parent to get crystals length and
-     * multiplying by amount which will be 1 or -1.
-     */
-    let uniqueProgress = 0;
-    if (isCrystal) {
-      // Successively reduce path until we achieve parent item containing
-      // amount of crystals
-      const parent = traversalPath.reduce(
-        (acc, id) => acc.ingredients[id],
-        recipeTree,
-      );
-
-      uniqueProgress = item.uniqueProgress + parent.crystalIds.length * amount;
-    } else {
-      uniqueProgress = item.uniqueProgress + increase;
-    }
-
-    // Update redux state, tree has now been updated
-    dispatch(editRecipeItem({ ...item, uniqueProgress }));
-    setTreeUpdated(true);
-  }
+  }, [performNavigation, navigation]);
 
   function renderIngredient(ingredient, parentCrystals, treePath = []) {
     const { ingredients, ingredientIds } = ingredient;
@@ -153,7 +110,6 @@ export default function Recipe({ route }) {
               <Ingredient
                 item={item}
                 crystals={idx === 0 ? parentCrystals : null}
-                onUpdateProgress={handleUpdateProgress}
                 treePath={[...treePath, item.id]}
               />
 

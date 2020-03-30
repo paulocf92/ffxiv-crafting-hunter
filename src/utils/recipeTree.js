@@ -124,13 +124,20 @@ function checkSmallestMilestone(item) {
   return smallest;
 }
 
-export function updateRecipeProgress(item, path, amount, updateCrystal) {
+export function updateRecipeProgress(
+  item,
+  baseItems,
+  path,
+  amount,
+  updateCrystal,
+) {
   // Path reaches 0 when we're at an actual item
   if (path.length > 0) {
     const idx = path.splice(0, 1)[0];
 
     const modified = updateRecipeProgress(
       item.ingredients[idx],
+      baseItems,
       path,
       amount,
       updateCrystal,
@@ -155,16 +162,36 @@ export function updateRecipeProgress(item, path, amount, updateCrystal) {
 
     progress = Math.min(smallest * item.recipeYield, item.totalRequired);
 
-    return { ...item, progress, ingredients };
+    const newItem = { ...item, progress, ingredients };
+
+    // Root level, therefore return item and its base items
+    if (item.depth === 0) {
+      return [newItem, baseItems];
+    }
+
+    return newItem;
   }
 
   // We reached a raw item/crystal, update accordingly
   if (updateCrystal) {
     // Recreate crystals either completing them entirely or resetting them
     const crystals = item.crystalIds.reduce((acc, id) => {
+      const required = item.crystals[id].totalRequired;
+
       const crystal = {
         ...item.crystals[id],
-        progress: amount > 0 ? item.crystals[id].totalRequired : 0,
+        progress: amount > 0 ? required : 0,
+      };
+
+      // Update base crystal
+      const increase = amount > 0 ? required : -required;
+
+      baseItems.data = {
+        ...baseItems.data,
+        [id]: {
+          ...baseItems.data[id],
+          progress: baseItems.data[id].progress + increase,
+        },
       };
 
       return { ...acc, [id]: crystal };
@@ -173,10 +200,27 @@ export function updateRecipeProgress(item, path, amount, updateCrystal) {
     const smallest = amount > 0 ? checkSmallestMilestone(item) : 0;
     const progress = Math.min(smallest * item.recipeYield, item.totalRequired);
 
-    return { ...item, crystals, progress };
+    const newItem = { ...item, crystals, progress };
+
+    // Root level, therefore return item and its base items
+    if (item.depth === 0) {
+      return [newItem, baseItems];
+    }
+
+    return newItem;
   }
 
   const progress = item.progress + amount;
+
+  // Update base materials
+  baseItems.data = {
+    ...baseItems.data,
+    [item.id]: {
+      ...baseItems.data[item.id],
+      progress,
+    },
+  };
+
   return { ...item, progress };
 }
 
@@ -476,11 +520,15 @@ export async function traverseRecipeTree(
     node.root = true;
     node.key = ingredient.ID;
 
-    // Crystals to the end of list
-    leafItems.ids = leafItems.ids.sort(
-      (a, b) =>
-        Number(leafItems.data[a].crystal) - Number(leafItems.data[b].crystal),
-    );
+    // Sort all base items and attach crystals to the end of list
+    const rawItems = leafItems.ids
+      .filter(id => !leafItems.data[id].crystal)
+      .sort((a, b) => a - b);
+    const crystals = leafItems.ids
+      .filter(id => leafItems.data[id].crystal)
+      .sort((a, b) => a - b);
+    leafItems.ids = [...rawItems, ...crystals];
+    leafItems.rawItemCount = rawItems.length;
 
     // Unique leaves for this recipe
     const unique = leafItems.ids.reduce(

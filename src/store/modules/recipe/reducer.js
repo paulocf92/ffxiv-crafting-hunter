@@ -9,7 +9,7 @@ const INITIAL_STATE = {
   updated: false,
   editing: {
     item: null,
-    baseItems: [],
+    baseItems: null,
   },
   performNavigation: false,
 };
@@ -25,7 +25,7 @@ export default function user(state = INITIAL_STATE, action) {
         draft.recipes = action.payload.recipes;
         draft.count = action.payload.count;
         draft.recipeIds = action.payload.recipeIds;
-        draft.editing = { item: null, baseItems: [] };
+        draft.editing = { item: null, baseItems: null };
         draft.loading = false;
         draft.performNavigation = false;
         break;
@@ -75,6 +75,7 @@ export default function user(state = INITIAL_STATE, action) {
       }
       case '@recipe/EDIT_RECIPE_ITEM_SUCCESS': {
         draft.editing.item = action.payload.item;
+        draft.editing.baseItems = action.payload.baseItems;
         draft.busy = false;
         break;
       }

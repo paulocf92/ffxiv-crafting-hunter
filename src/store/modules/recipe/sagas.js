@@ -159,9 +159,15 @@ function* deleteRecipe({ payload }) {
 function* editRecipeItem({ payload }) {
   try {
     const { path, amount, uniqueIncrease, updateCrystal } = payload;
-    const { item } = yield select(state => state.recipe.editing);
+    const { item, baseItems } = yield select(state => state.recipe.editing);
 
-    const edited = updateRecipeProgress(item, path, amount, updateCrystal);
+    const [newItem, newBaseItems] = updateRecipeProgress(
+      { ...item },
+      { ...baseItems },
+      path,
+      amount,
+      updateCrystal,
+    );
 
     /**
      * Evaluate recipe's unique leaves progress based on whether they're
@@ -181,7 +187,9 @@ function* editRecipeItem({ payload }) {
       uniqueProgress = item.uniqueProgress + uniqueIncrease;
     }
 
-    yield put(editRecipeItemSuccess({ ...edited, uniqueProgress }));
+    yield put(
+      editRecipeItemSuccess({ ...newItem, uniqueProgress }, newBaseItems),
+    );
   } catch (err) {
     yield put(editRecipeItemFailure);
   }

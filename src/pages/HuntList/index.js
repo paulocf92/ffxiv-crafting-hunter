@@ -101,7 +101,6 @@ export default function HuntList() {
           onChangeSelected={handleSelected}
         />
         <List
-          key={recipeIds.length}
           data={recipeIds}
           keyExtractor={(_, idx) => String(idx)}
           renderItem={({ item }) => (

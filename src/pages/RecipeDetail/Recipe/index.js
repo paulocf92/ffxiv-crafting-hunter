@@ -14,11 +14,9 @@ import {
 
 import Ingredient from './Ingredient';
 
+import { OutputItem, OutputItemText, OutputItemImage } from '../shared_styles';
 import {
   Container,
-  OutputItem,
-  OutputItemText,
-  Image,
   RecipeTreeContainer,
   RecipeTree,
   RecipeTreeRow,
@@ -149,7 +147,7 @@ export default function Recipe({ route }) {
     <>
       <Container>
         <OutputItem>
-          <Image
+          <OutputItemImage
             source={{
               uri: recipe.icon,
             }}

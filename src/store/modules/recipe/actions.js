@@ -89,10 +89,10 @@ export function editRecipeItemRequest(
   };
 }
 
-export function editRecipeItemSuccess(item) {
+export function editRecipeItemSuccess(item, baseItems) {
   return {
     type: '@recipe/EDIT_RECIPE_ITEM_SUCCESS',
-    payload: { item },
+    payload: { item, baseItems },
   };
 }
 

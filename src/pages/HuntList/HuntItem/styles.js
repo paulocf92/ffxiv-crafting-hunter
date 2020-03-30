@@ -10,7 +10,6 @@ export const ProgressBar = styled(LinearGradient)`
 `;
 
 export const Container = styled.View`
-  flex: 1;
   flex-direction: row;
 
   padding-bottom: 5px;

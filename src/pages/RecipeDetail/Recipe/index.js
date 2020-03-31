@@ -3,7 +3,6 @@ import { useSelector, useDispatch } from 'react-redux';
 import { View, Alert, BackHandler } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import PropTypes from 'prop-types';
-import Svg, { Path } from 'react-native-svg';
 
 import Loader from '~/components/Loader';
 
@@ -100,8 +99,10 @@ export default function Recipe({ route }) {
 
     return (
       <View>
-        {ingredientIds.map((id, idx) => {
+        {ingredientIds.map((id, idx, arr) => {
           const item = ingredients[id];
+          const type = { '0': 'd', [String(arr.length - 1)]: 'u' };
+          const isSingle = arr.length === 1;
 
           return (
             <RecipeTreeRow key={item.id} spacing={ingredient.depth === 0}>
@@ -109,33 +110,19 @@ export default function Recipe({ route }) {
                 item={item}
                 crystals={idx === 0 ? parentCrystals : null}
                 treePath={[...treePath, item.id]}
+                branchType={type[idx]}
+                single={isSingle}
               />
 
-              {item.ingredients && (
-                <>
-                  <Svg
-                    width="56"
-                    height={item.svgHeight}
-                    viewBox={`0 0 60 ${item.svgHeight}`}
-                  >
-                    <Path
-                      d={item.svgGraph}
-                      fill="none"
-                      stroke="#888"
-                      strokeWidth="2"
-                    />
-                  </Svg>
-
-                  {renderIngredient(
-                    item,
-                    {
-                      ids: item.crystalIds,
-                      crystals: item.crystals,
-                    },
-                    [...treePath, item.id],
-                  )}
-                </>
-              )}
+              {item.ingredients &&
+                renderIngredient(
+                  item,
+                  {
+                    ids: item.crystalIds,
+                    crystals: item.crystals,
+                  },
+                  [...treePath, item.id],
+                )}
             </RecipeTreeRow>
           );
         })}

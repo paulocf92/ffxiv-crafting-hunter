@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 import CrystalCluster from './CrystalCluster';
+import TreeBranch, { Line } from '~/components/TreeBranch';
 
 import { editRecipeItemRequest } from '~/store/modules/recipe/actions';
 
@@ -20,7 +21,13 @@ import {
   ItemText,
 } from './styles';
 
-export default function Ingredient({ item, crystals, treePath }) {
+export default function Ingredient({
+  item,
+  crystals,
+  treePath,
+  branchType,
+  single,
+}) {
   const busy = useSelector(state => state.recipe.busy);
   const [crystalPath, setCrystalPath] = useState([]);
 
@@ -70,62 +77,67 @@ export default function Ingredient({ item, crystals, treePath }) {
 
   return (
     item && (
-      <Container>
-        {item.leaf && (
-          <Actions>
-            <Action
-              disabled={incrementDisabled || busy}
-              onPress={() => handleIncrement()}
-              onLongPress={() => handleIncrement(true)}
-              delayLongPress={800}
-            >
-              <Icon
-                name="add-circle"
-                size={32}
-                color={incrementDisabled ? '#ddd' : '#28d77d'}
-              />
-            </Action>
-            <Action
-              disabled={decrementDisabled || busy}
-              onPress={() => handleDecrement()}
-              onLongPress={() => handleDecrement(true)}
-              delayLongPress={800}
-            >
-              <Icon
-                name="remove-circle"
-                size={32}
-                color={decrementDisabled ? '#ddd' : '#F64c75'}
-              />
-            </Action>
-          </Actions>
-        )}
-        <Data withCrystals={!!crystals}>
-          {crystals && (
-            <CrystalCluster
-              cluster={crystals}
-              onUpdateCrystal={handleCrystalCompletion}
-            />
+      <>
+        {item.depth > 1 &&
+          (single ? <Line /> : <TreeBranch type={branchType} />)}
+        <Container>
+          {item.leaf && (
+            <Actions>
+              <Action
+                disabled={incrementDisabled || busy}
+                onPress={() => handleIncrement()}
+                onLongPress={() => handleIncrement(true)}
+                delayLongPress={800}
+              >
+                <Icon
+                  name="add-circle"
+                  size={32}
+                  color={incrementDisabled ? '#ddd' : '#28d77d'}
+                />
+              </Action>
+              <Action
+                disabled={decrementDisabled || busy}
+                onPress={() => handleDecrement()}
+                onLongPress={() => handleDecrement(true)}
+                delayLongPress={800}
+              >
+                <Icon
+                  name="remove-circle"
+                  size={32}
+                  color={decrementDisabled ? '#ddd' : '#F64c75'}
+                />
+              </Action>
+            </Actions>
           )}
-          <Item
-            key={item.id}
-            useAngle
-            angle={178}
-            angleCenter={{ x: 0.5, y: 0.5 }}
-            locations={[0, 0.8]}
-            colors={statusColors}
-          >
-            <ItemData>
-              <ItemQty>{item.totalRequired}</ItemQty>
-              <ItemIcon source={{ uri: item.icon }} />
-              <Progress>
-                <ItemText>
-                  {`${item.name}\n${item.progress}/${item.totalRequired}`}
-                </ItemText>
-              </Progress>
-            </ItemData>
-          </Item>
-        </Data>
-      </Container>
+          <Data withCrystals={!!crystals}>
+            {crystals && (
+              <CrystalCluster
+                cluster={crystals}
+                onUpdateCrystal={handleCrystalCompletion}
+              />
+            )}
+            <Item
+              key={item.id}
+              useAngle
+              angle={178}
+              angleCenter={{ x: 0.5, y: 0.5 }}
+              locations={[0, 0.8]}
+              colors={statusColors}
+            >
+              <ItemData>
+                <ItemQty>{item.totalRequired}</ItemQty>
+                <ItemIcon source={{ uri: item.icon }} />
+                <Progress>
+                  <ItemText>
+                    {`${item.name}\n${item.progress}/${item.totalRequired}`}
+                  </ItemText>
+                </Progress>
+              </ItemData>
+            </Item>
+          </Data>
+        </Container>
+        {!item.leaf && <Line />}
+      </>
     )
   );
 }
@@ -133,6 +145,7 @@ export default function Ingredient({ item, crystals, treePath }) {
 Ingredient.propTypes = {
   item: PropTypes.shape({
     id: PropTypes.number,
+    depth: PropTypes.number,
     name: PropTypes.string,
     totalRequired: PropTypes.number,
     progress: PropTypes.number,
@@ -148,8 +161,11 @@ Ingredient.propTypes = {
     ids: PropTypes.arrayOf(PropTypes.number),
   }),
   treePath: PropTypes.arrayOf(PropTypes.number).isRequired,
+  branchType: PropTypes.string,
+  single: PropTypes.bool.isRequired,
 };
 
 Ingredient.defaultProps = {
   crystals: null,
+  branchType: 't',
 };

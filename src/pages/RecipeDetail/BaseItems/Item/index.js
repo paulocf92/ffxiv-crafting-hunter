@@ -1,4 +1,5 @@
 import React from 'react';
+import { useSelector } from 'react-redux';
 import { View, Text } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import PropTypes from 'prop-types';
@@ -43,16 +44,19 @@ ProgressText.propTypes = {
 };
 
 export default function Item({ data }) {
+  const itemProgress = useSelector(
+    state => state.recipe.update.baseItems.data[data.id].progress,
+  );
   function handleCompletion() {}
 
   return (
-    <Container onPress={() => handleCompletion()}>
+    <Container>
       {data && (
         <>
           <ItemData onPress={() => handleCompletion()}>
             <ProgressText
               totalRequired={data.totalRequired}
-              progress={data.progress}
+              progress={itemProgress}
             />
             <Image source={{ uri: data.icon }} />
             <Name>{data.name}</Name>
@@ -60,7 +64,7 @@ export default function Item({ data }) {
             <Icon
               name="done"
               size={25}
-              color={data.progress === data.totalRequired ? '#28d77d' : '#ddd'}
+              color={itemProgress === data.totalRequired ? '#28d77d' : '#ddd'}
               style={{ paddingLeft: 4 }}
             />
           </ItemData>
@@ -72,6 +76,7 @@ export default function Item({ data }) {
 
 Item.propTypes = {
   data: PropTypes.shape({
+    id: PropTypes.number,
     name: PropTypes.string,
     icon: PropTypes.string,
     progress: PropTypes.number,

@@ -1,5 +1,6 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { useSelector } from 'react-redux';
+import { createSelector } from 'reselect';
 import PropTypes from 'prop-types';
 
 import {
@@ -10,18 +11,33 @@ import {
   CrystalIcon,
 } from './styles';
 
-export default function CrystalCluster({ cluster, onUpdateCrystal }) {
-  const busy = useSelector(state => state.recipe.busy);
-  const [complete, setComplete] = useState(false);
+const progressSelector = createSelector(
+  state => state.recipe.update.item,
+  (_, path) => path,
+  (item, path) => {
+    if (path) {
+      const parent = [...path].reduce((acc, id) => acc.ingredients[id], item);
+      const id = parent.crystalIds[0];
+      return parent.crystals[id].progress;
+    }
 
-  useEffect(() => {
+    return 0;
+  },
+);
+
+export default function CrystalCluster({
+  cluster,
+  crystalPath,
+  onUpdateCrystal,
+}) {
+  const crystalProgress = useSelector(state =>
+    progressSelector(state, crystalPath),
+  );
+
+  const complete = useMemo(() => {
     const { crystals, ids } = cluster;
-    const completion = !!ids.filter(
-      id => crystals[id].progress === crystals[id].totalRequired,
-    ).length;
-
-    setComplete(completion);
-  }, [cluster]);
+    return crystalProgress === crystals[ids[0]].totalRequired;
+  }, [crystalProgress, cluster]);
 
   const statusColors = useMemo(() => {
     const colors = ['#c4c4c4'];
@@ -31,15 +47,14 @@ export default function CrystalCluster({ cluster, onUpdateCrystal }) {
   }, [complete]);
 
   function handleUpdateCrystal() {
-    const toggled = !complete;
-    setComplete(toggled);
+    const flipped = !complete;
 
-    onUpdateCrystal(toggled ? 1 : -1);
+    onUpdateCrystal(flipped ? 1 : -1);
   }
 
   return (
     cluster && (
-      <Container onPress={() => handleUpdateCrystal()} disabled={busy}>
+      <Container onPress={() => handleUpdateCrystal()}>
         <Crystal
           useAngle
           angle={178}
@@ -68,5 +83,6 @@ CrystalCluster.propTypes = {
     }),
     ids: PropTypes.arrayOf(PropTypes.number),
   }).isRequired,
+  crystalPath: PropTypes.arrayOf(PropTypes.number).isRequired,
   onUpdateCrystal: PropTypes.func.isRequired,
 };

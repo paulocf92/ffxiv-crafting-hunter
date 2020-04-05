@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { createSelector } from 'reselect';
 import PropTypes from 'prop-types';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
@@ -21,6 +22,18 @@ import {
   ItemText,
 } from './styles';
 
+const progressSelector = createSelector(
+  state => state.recipe.update.item,
+  (_, path) => path,
+  (item, path) => {
+    if (path) {
+      return [...path].reduce((acc, id) => acc.ingredients[id], item).progress;
+    }
+
+    return 0;
+  },
+);
+
 export default function Ingredient({
   item,
   crystals,
@@ -28,51 +41,50 @@ export default function Ingredient({
   branchType,
   single,
 }) {
-  const busy = useSelector(state => state.recipe.busy);
+  const itemProgress = useSelector(state => progressSelector(state, treePath));
   const [crystalPath, setCrystalPath] = useState([]);
 
   const dispatch = useDispatch();
 
   useEffect(() => {
-    // Crystals are updated all at once, hence it requires walking up the tree
+    // Crystals are updated from parent all at once, hence it requires walking
+    // up the tree
     setCrystalPath(treePath.slice(0, -1));
   }, [treePath]);
 
-  const incrementDisabled = useMemo(
-    () => item.progress === item.totalRequired,
-    [item.progress, item.totalRequired],
-  );
+  const incrementDisabled = useMemo(() => itemProgress === item.totalRequired, [
+    itemProgress,
+    item.totalRequired,
+  ]);
 
-  const decrementDisabled = useMemo(() => item.progress === 0, [item.progress]);
+  const decrementDisabled = useMemo(() => itemProgress === 0, [itemProgress]);
 
   const statusColors = useMemo(() => {
     const colors = ['#c4c4c4'];
 
-    colors.push(item.progress === item.totalRequired ? '#beff33' : '#c4c4c4');
+    colors.push(itemProgress === item.totalRequired ? '#beff33' : '#c4c4c4');
 
     return colors;
-  }, [item.progress, item.totalRequired]);
+  }, [itemProgress, item.totalRequired]);
 
   function handleIncrement(complete = false) {
-    const amount = complete ? item.totalRequired - item.progress : 1;
+    const amount = complete ? item.totalRequired - itemProgress : 1;
     // Only increase if this amount will equal to total required afterwards
-    const uniqueIncrease = Number(
-      item.progress + amount === item.totalRequired,
-    );
+    const updateUnique = Number(itemProgress + amount === item.totalRequired);
 
-    dispatch(editRecipeItemRequest(treePath, amount, uniqueIncrease));
+    dispatch(editRecipeItemRequest([...treePath], amount, updateUnique));
   }
 
   function handleDecrement(complete = false) {
-    const amount = complete ? -item.progress : -1;
+    const amount = complete ? -itemProgress : -1;
     // Only decrease if we had total required previously
-    const uniqueDecrease = (item.progress === item.totalRequired) * -1;
+    const updateUnique = (itemProgress === item.totalRequired) * -1;
 
-    dispatch(editRecipeItemRequest(treePath, amount, uniqueDecrease));
+    dispatch(editRecipeItemRequest([...treePath], amount, updateUnique));
   }
 
   function handleCrystalCompletion(amount) {
-    dispatch(editRecipeItemRequest(crystalPath, amount, amount, true));
+    dispatch(editRecipeItemRequest([...crystalPath], amount, amount, true));
   }
 
   return (
@@ -84,7 +96,7 @@ export default function Ingredient({
           {item.leaf && (
             <Actions>
               <Action
-                disabled={incrementDisabled || busy}
+                disabled={incrementDisabled}
                 onPress={() => handleIncrement()}
                 onLongPress={() => handleIncrement(true)}
                 delayLongPress={800}
@@ -96,7 +108,7 @@ export default function Ingredient({
                 />
               </Action>
               <Action
-                disabled={decrementDisabled || busy}
+                disabled={decrementDisabled}
                 onPress={() => handleDecrement()}
                 onLongPress={() => handleDecrement(true)}
                 delayLongPress={800}
@@ -113,6 +125,7 @@ export default function Ingredient({
             {crystals && (
               <CrystalCluster
                 cluster={crystals}
+                crystalPath={[...crystalPath]}
                 onUpdateCrystal={handleCrystalCompletion}
               />
             )}
@@ -129,7 +142,7 @@ export default function Ingredient({
                 <ItemIcon source={{ uri: item.icon }} />
                 <Progress>
                   <ItemText>
-                    {`${item.name}\n${item.progress}/${item.totalRequired}`}
+                    {`${item.name}\n${itemProgress}/${item.totalRequired}`}
                   </ItemText>
                 </Progress>
               </ItemData>

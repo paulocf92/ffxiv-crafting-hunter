@@ -24,6 +24,176 @@ const CRYSTALS = [
   /^Wind Cluster$/,
 ];
 
+export function composeUpdateState(item, baseItems) {
+  let ingredients = null;
+  let ingredientIds = [];
+  let crystals = null;
+  let crystalIds = [];
+
+  if (item.ingredients) {
+    ingredients = item.ingredientIds.reduce((acc, iid) => {
+      const ingredient = composeUpdateState(item.ingredients[iid]);
+      return { ...acc, [iid]: ingredient };
+    }, {});
+    ingredientIds = [...item.ingredientIds];
+
+    crystals = item.crystalIds.reduce((acc, iid) => {
+      const { id, progress, perRecipe, totalRequired } = item.crystals[iid];
+      return {
+        ...acc,
+        [iid]: {
+          id,
+          progress,
+          perRecipe,
+          totalRequired,
+        },
+      };
+    }, {});
+    crystalIds = [...item.crystalIds];
+  }
+
+  const { id, depth, progress, recipeYield, perRecipe, totalRequired } = item;
+
+  // Root
+  if (item.depth === 0) {
+    const { uniqueProgress } = item;
+
+    const data = baseItems.ids.reduce((acc, iid) => {
+      const { id: a, progress: b, totalRequired: c } = baseItems.data[iid];
+
+      return { ...acc, [iid]: { id: a, progress: b, totalRequired: c } };
+    }, {});
+
+    const composed = {
+      item: {
+        id,
+        depth,
+        uniqueProgress,
+        recipeYield,
+        progress,
+        perRecipe,
+        totalRequired,
+        ingredients,
+        ingredientIds,
+        crystals,
+        crystalIds,
+      },
+      baseItems: {
+        data,
+      },
+    };
+
+    return composed;
+  }
+
+  // Children whose depth > 0, leaves don't contain ingredients/crystals
+  return {
+    id,
+    depth,
+    progress,
+    perRecipe,
+    totalRequired,
+    ...(ingredients && {
+      recipeYield,
+      ingredients,
+      ingredientIds,
+      crystals,
+      crystalIds,
+    }),
+  };
+}
+
+function updateRecipe({ item, itemUpdates }, base) {
+  let ingredients = null;
+  let crystals = null;
+
+  if (item.ingredients) {
+    ingredients = item.ingredientIds.reduce((acc, iid) => {
+      const { [iid]: iItem } = item.ingredients;
+      const { [iid]: iItemUpdates } = itemUpdates.ingredients;
+
+      const ingredient = updateRecipe({
+        item: iItem,
+        itemUpdates: iItemUpdates,
+      });
+
+      return { ...acc, [iid]: ingredient };
+    }, {});
+
+    crystals = item.crystalIds.reduce((acc, iid) => {
+      const { [iid]: crystal } = item.crystals;
+      const { progress } = itemUpdates.crystals[iid];
+
+      return {
+        ...acc,
+        [iid]: {
+          ...crystal,
+          progress,
+        },
+      };
+    }, {});
+  }
+
+  // Root
+  if (item.depth === 0) {
+    const { baseItems, baseItemsUpdates } = base;
+
+    const data = baseItems.ids.reduce((acc, iid) => {
+      const { [iid]: baseItem } = baseItems.data;
+      const { progress } = baseItemsUpdates.data[iid];
+
+      return { ...acc, [iid]: { ...baseItem, progress } };
+    }, {});
+
+    const { uniqueProgress, progress } = itemUpdates;
+
+    const updated = {
+      item: {
+        ...item,
+        uniqueProgress,
+        progress,
+        ingredients,
+        crystals,
+      },
+      baseItems: {
+        ...baseItems,
+        data,
+      },
+    };
+
+    return updated;
+  }
+
+  // Update progress
+  const { progress } = itemUpdates;
+  return {
+    ...item,
+    progress,
+    ...(ingredients && {
+      ingredients,
+      crystals,
+    }),
+  };
+}
+
+export function updateRecipeProgress(editingState, updateState) {
+  const { item, baseItems } = editingState;
+  const { item: itemUpdates, baseItems: baseItemsUpdates } = updateState;
+
+  const updated = updateRecipe(
+    {
+      item,
+      itemUpdates,
+    },
+    {
+      baseItems,
+      baseItemsUpdates,
+    },
+  );
+
+  return updated;
+}
+
 function checkSmallestMilestone(item) {
   const smallest = Math.min(
     ...item.ingredientIds.map(id =>
@@ -36,7 +206,7 @@ function checkSmallestMilestone(item) {
   return smallest;
 }
 
-export function updateRecipeProgress(
+export function editRecipeProgress(
   item,
   baseItems,
   path,
@@ -47,7 +217,7 @@ export function updateRecipeProgress(
   if (path.length > 0) {
     const idx = path.splice(0, 1)[0];
 
-    const modified = updateRecipeProgress(
+    const modified = editRecipeProgress(
       item.ingredients[idx],
       baseItems,
       path,
@@ -56,6 +226,7 @@ export function updateRecipeProgress(
     );
 
     let { progress } = item;
+    const { ingredientIds } = item;
 
     const ingredients = { ...item.ingredients, [idx]: modified };
 
@@ -66,7 +237,7 @@ export function updateRecipeProgress(
 
     const smallest = Math.min(
       checkSmallestMilestone({
-        ingredientIds: item.ingredientIds,
+        ingredientIds,
         ingredients, // Evaluate modified ingredients
       }),
       crystalMilestone,

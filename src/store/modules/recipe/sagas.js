@@ -5,7 +5,9 @@ import RecipeColumns from '~/config/RecipeQueryColumns';
 import {
   traverseRecipeTree,
   resetRecipeProgress,
+  editRecipeProgress,
   updateRecipeProgress,
+  composeUpdateState,
 } from '~/utils/recipeTree';
 
 import api from '~/services/api';
@@ -77,7 +79,10 @@ function* loadSingleRecipe({ payload }) {
 
     const recipe = yield call(storage.getItem, `@craftinghunter_recipe_${id}`);
 
-    yield put(loadSingleRecipeSuccess(recipe));
+    const { item, baseItems } = recipe;
+    const updates = composeUpdateState(item, baseItems);
+
+    yield put(loadSingleRecipeSuccess(recipe, updates));
   } catch (err) {
     yield put(loadSingleRecipeFailure());
   }
@@ -156,12 +161,12 @@ function* deleteRecipe({ payload }) {
   }
 }
 
-function* editRecipeItem({ payload }) {
+function* editItem({ payload }) {
   try {
     const { path, amount, uniqueIncrease, updateCrystal } = payload;
-    const { item, baseItems } = yield select(state => state.recipe.editing);
+    const { item, baseItems } = yield select(state => state.recipe.update);
 
-    const [newItem, newBaseItems] = updateRecipeProgress(
+    const [newItem, newBaseItems] = editRecipeProgress(
       { ...item },
       { ...baseItems },
       path,
@@ -169,21 +174,17 @@ function* editRecipeItem({ payload }) {
       updateCrystal,
     );
 
-    /**
-     * Evaluate recipe's unique leaves progress based on whether they're
-     * crystals or raw ingredients.
-     * If item/crystal is to be increased, uniqueIncrease will be 1/-1, it will
-     * be 0 otherwise (unchanged).
-     */
+    // Evaluate recipe's overall progress based on completed leaves.
     let uniqueProgress = 0;
     if (updateCrystal) {
-      // Successively reduce path until we achieve parent item containing
-      // amount of crystals
       const parent = path.reduce((acc, id) => acc.ingredients[id], item);
 
+      // Crystals are all completed/depleted at once, thus number of unique
+      // crystals is used (number of unique * [1, -1]).
       uniqueProgress =
         item.uniqueProgress + parent.crystalIds.length * uniqueIncrease;
     } else {
+      // Raw materials are completed one by one
       uniqueProgress = item.uniqueProgress + uniqueIncrease;
     }
 
@@ -191,20 +192,22 @@ function* editRecipeItem({ payload }) {
       editRecipeItemSuccess({ ...newItem, uniqueProgress }, newBaseItems),
     );
   } catch (err) {
-    yield put(editRecipeItemFailure);
+    yield put(editRecipeItemFailure());
   }
 }
 
 function* updateRecipe() {
   try {
-    const editingRecipe = yield select(state => state.recipe.editing);
-    const { key } = editingRecipe.item;
+    const { editing, update } = yield select(state => state.recipe);
+    const { key } = editing.item;
 
-    yield call(storage.setItem, `@craftinghunter_recipe_${key}`, editingRecipe);
+    const updated = updateRecipeProgress(editing, update);
+
+    yield call(storage.setItem, `@craftinghunter_recipe_${key}`, updated);
 
     yield put(updateRecipeSuccess());
   } catch (err) {
-    yield put(updateRecipeFailure());
+    yield put(updateRecipeFailure(err));
   }
 }
 
@@ -248,5 +251,5 @@ export default all([
   takeLatest('@recipe/UPDATE_RECIPE_REQUEST', updateRecipe),
   takeLatest('@recipe/CLEAR_RECIPES_REQUEST', clearRecipes),
   takeLatest('@recipe/RESET_RECIPE_PROGRESS_REQUEST', resetProgress),
-  takeLatest('@recipe/EDIT_RECIPE_ITEM_REQUEST', editRecipeItem),
+  takeLatest('@recipe/EDIT_RECIPE_ITEM_REQUEST', editItem),
 ]);

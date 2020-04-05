@@ -64,10 +64,10 @@ export function loadSingleRecipeRequest(id) {
   };
 }
 
-export function loadSingleRecipeSuccess(recipe) {
+export function loadSingleRecipeSuccess(recipe, update) {
   return {
     type: '@recipe/LOAD_SINGLE_RECIPE_SUCCESS',
-    payload: { recipe },
+    payload: { recipe, update },
   };
 }
 

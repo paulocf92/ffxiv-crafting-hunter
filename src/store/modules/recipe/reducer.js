@@ -5,9 +5,12 @@ const INITIAL_STATE = {
   recipes: {},
   recipeIds: [],
   loading: false,
-  busy: false,
   updated: false,
   editing: {
+    item: null,
+    baseItems: null,
+  },
+  update: {
     item: null,
     baseItems: null,
   },
@@ -36,6 +39,7 @@ export default function user(state = INITIAL_STATE, action) {
       }
       case '@recipe/LOAD_SINGLE_RECIPE_SUCCESS': {
         draft.editing = action.payload.recipe;
+        draft.update = action.payload.update;
         draft.updated = false;
         draft.loading = false;
         break;
@@ -69,18 +73,12 @@ export default function user(state = INITIAL_STATE, action) {
         break;
       }
       case '@recipe/EDIT_RECIPE_ITEM_REQUEST': {
-        draft.busy = true;
         draft.updated = true;
         break;
       }
       case '@recipe/EDIT_RECIPE_ITEM_SUCCESS': {
-        draft.editing.item = action.payload.item;
-        draft.editing.baseItems = action.payload.baseItems;
-        draft.busy = false;
-        break;
-      }
-      case '@recipe/EDIT_RECIPE_ITEM': {
-        draft.editing.item = action.payload.item;
+        const { item, baseItems } = action.payload;
+        draft.update = { item, baseItems };
         break;
       }
       case '@recipe/EDIT_RECIPE_BASE_ITEMS': {

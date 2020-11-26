@@ -1,6 +1,6 @@
 **This repository is archived!**
 
-This repository aimed at developing a full React Native app aimed to track Final Fantasy XIV recipe materials in a to-do list fashion. Since the project grew out of scope, I couldn't find the time to adjust it to provide a solid storage solution which probably would involve a backend with tree data structure database support. The most relevant and interesting concepts in the development of this project were:
+This repository aimed at developing a full React Native app to track Final Fantasy XIV recipe materials in a to-do list fashion. Since the project grew out of scope, I couldn't find the time/inspiration to adjust it to provide a solid storage solution which would probably involve a backend with tree data structure database support. The most relevant and interesting concepts in the development of this project were:
 
 - App state management with `react-redux`
 - Simple RESTful requests with `axios`

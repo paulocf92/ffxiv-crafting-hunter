@@ -1,4 +1,5 @@
-<p style="padding: 4px; text-align: center; font-weight: bold; background-color: #f5c676; color: #c78a22;">This repository is archived!</p>
+**This repository is archived!**
+
 This repository aimed at developing a full React Native app aimed to track Final Fantasy XIV recipe materials in a to-do list fashion. Since the project grew out of scope, I couldn't find the time to adjust it to provide a solid storage solution which probably would involve a backend with tree data structure database support. The most relevant and interesting concepts in the development of this project were:
 
 - App state management with `react-redux`
